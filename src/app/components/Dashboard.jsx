@@ -14,11 +14,32 @@ import {
   Alert,
   CircularProgress,
 } from "@mui/material";
-import { Email } from "@mui/icons-material";
+import { Email, Assignment } from "@mui/icons-material";
 import HexagonMenu from "./HexagonMenu";
+
+function leerNombreSesion() {
+  try {
+    const usuario = localStorage.getItem("usuario");
+    if (usuario != null && String(usuario).trim() !== "") {
+      return String(usuario).trim();
+    }
+    const raw = localStorage.getItem("infoUser");
+    if (raw) {
+      const u = JSON.parse(raw);
+      const alias = String(u?.emp_alias ?? "").trim();
+      if (alias) return alias;
+      const nombre = String(u?.emp_nombre ?? "").trim();
+      if (nombre) return nombre;
+    }
+  } catch {
+    /* ignore */
+  }
+  return "Usuario";
+}
 
 function Dashboard() {
   const [mounted, setMounted] = useState(false);
+  const [nombreBienvenida, setNombreBienvenida] = useState("");
   const [open, setOpen] = useState(false);
   const [to, setTo] = useState("");
   const [subject, setSubject] = useState("");
@@ -28,6 +49,7 @@ function Dashboard() {
 
   useEffect(() => {
     setMounted(true);
+    setNombreBienvenida(leerNombreSesion());
   }, []);
 
   const handleClose = () => {
@@ -80,11 +102,64 @@ function Dashboard() {
 
   return (
     <HexagonMenu selectedItemId="inicio">
+      <Box
+        sx={{
+          maxWidth: 900,
+          mx: "auto",
+          mb: 3,
+          px: { xs: 1, sm: 2 },
+        }}
+      >
+        <Box
+          sx={{
+            borderRadius: 3,
+            py: { xs: 4, sm: 5 },
+            px: 3,
+            textAlign: "center",
+            background: "linear-gradient(145deg, #1e3a8a 0%, #2563eb 45%, #3b82f6 100%)",
+            boxShadow: "0 12px 40px rgba(30, 58, 138, 0.28)",
+            border: "1px solid rgba(147, 197, 253, 0.35)",
+          }}
+        >
+          <Assignment
+            sx={{
+              fontSize: 52,
+              color: "rgba(255,255,255,0.95)",
+              mb: 1.5,
+              display: "block",
+              mx: "auto",
+            }}
+          />
+          <Typography
+            component="h1"
+            sx={{
+              color: "#ffffff",
+              fontWeight: 700,
+              fontSize: { xs: "1.5rem", sm: "1.85rem" },
+              letterSpacing: "0.02em",
+              mb: 1,
+              lineHeight: 1.25,
+            }}
+          >
+            Bienvenido{nombreBienvenida ? `, ${nombreBienvenida}` : ""}
+          </Typography>
+          <Typography
+            sx={{
+              color: "rgba(255,255,255,0.88)",
+              fontWeight: 500,
+              fontSize: "1rem",
+            }}
+          >
+            System V-Docs
+          </Typography>
+        </Box>
+      </Box>
+
       <Paper
         elevation={6}
         sx={{
           p: 4,
-          maxWidth: 720,
+          maxWidth: 900,
           mx: "auto",
           backgroundColor: "#ffffff",
           border: "1px solid rgba(65, 105, 225, 0.16)",
@@ -92,7 +167,7 @@ function Dashboard() {
         }}
       >
         <Typography
-          variant="h4"
+          variant="h6"
           sx={{
             color: "#1e3a8a",
             fontWeight: 700,
@@ -100,14 +175,13 @@ function Dashboard() {
             textAlign: "center",
           }}
         >
-          System V-Docs
+          Panel principal
         </Typography>
         <Typography
           variant="body2"
           sx={{ color: "rgba(30, 58, 138, 0.75)", textAlign: "center", mb: 4 }}
         >
-          Panel principal. Use el menú lateral para navegar o envíe un correo
-          desde aquí.
+          Use el menú lateral para navegar o envíe un correo desde aquí.
         </Typography>
 
         <Box sx={{ display: "flex", justifyContent: "center" }}>

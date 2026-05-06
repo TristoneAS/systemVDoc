@@ -20,12 +20,67 @@ function ensureDir(dirPath) {
   }
 }
 
-export async function GET() {
+/** Tu tabla usa `motivo` VARCHAR(300) NOT NULL. */
+const MOTIVO_SOLICITUD_MAX = 300;
+
+function normalizeMotivoSolicitud(raw, fallbackSiVacio = "Sin descripción") {
+  let s = String(raw ?? "").trim();
+  if (!s) s = String(fallbackSiVacio ?? "").trim();
+  if (!s) s = "Sin descripción";
+  if (s.length > MOTIVO_SOLICITUD_MAX) {
+    s = s.slice(0, MOTIVO_SOLICITUD_MAX);
+  }
+  return s;
+}
+
+export async function GET(request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const forEmpId = String(searchParams.get("for_emp_id") || "").trim();
+
     const [rows] = await conn.query(
       `SELECT * FROM solicitudes ORDER BY fecha_creacion DESC`,
     );
-    return NextResponse.json({ success: true, data: rows });
+
+    const pendienteIds = rows
+      .filter((r) => r.estado === "pendiente")
+      .map((r) => r.id_solicitud);
+
+    /** Solicitudes donde `forEmpId` tiene al menos una fila pendiente en `aprobaciones`. */
+    const solicitudesDondePuedoActuar = new Set();
+    if (forEmpId && pendienteIds.length > 0) {
+      try {
+        const placeholders = pendienteIds.map(() => "?").join(",");
+        const [apRows] = await conn.query(
+          `SELECT DISTINCT id_solicitud FROM aprobaciones
+           WHERE id_solicitud IN (${placeholders})
+             AND TRIM(emp_id) = ?
+             AND status = 'pendiente'`,
+          [...pendienteIds, forEmpId],
+        );
+        for (const row of apRows) {
+          solicitudesDondePuedoActuar.add(row.id_solicitud);
+        }
+      } catch (e) {
+        if (e?.code !== "ER_NO_SUCH_TABLE" && e?.errno !== 1146) {
+          throw e;
+        }
+      }
+    }
+
+    const data = rows.map((r) => {
+      const puedo =
+        Boolean(forEmpId) &&
+        r.estado === "pendiente" &&
+        solicitudesDondePuedoActuar.has(r.id_solicitud);
+      return {
+        ...r,
+        puede_aprobar: puedo,
+        puede_rechazar: puedo,
+      };
+    });
+
+    return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error("Error al listar solicitudes:", error);
     return NextResponse.json(
@@ -81,11 +136,16 @@ export async function POST(request) {
 
       const id_documento = await getNextIdDocumento();
 
+      const motivoNorm = normalizeMotivoSolicitud(
+        formData.get("motivo"),
+        `Alta de nuevo documento: ${nombre_documento}`,
+      );
+
       const [ins] = await conn.query(
         `INSERT INTO solicitudes
         (tipo, estado, id_documento, fecha_alta, emp_id_solicitante, solicitante,
-         nomenclatura, nombre_documento, id_area, emp_id_responsable, responsable_documento, motivo)
-        VALUES ('nuevo', 'pendiente', ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL)`,
+         nomenclatura, nombre_documento, id_area, motivo, status)
+        VALUES ('nuevo', 'pendiente', ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente')`,
         [
           id_documento,
           fecha_alta,
@@ -94,6 +154,7 @@ export async function POST(request) {
           nomenclatura,
           nombre_documento,
           id_area,
+          motivoNorm,
         ],
       );
 
@@ -167,8 +228,6 @@ export async function POST(request) {
       const motivo = formData.get("motivo");
       const emp_id_solicitante = formData.get("emp_id_solicitante");
       const solicitante = formData.get("solicitante");
-      const emp_id_responsable = formData.get("emp_id_responsable");
-      const responsable_documento = formData.get("responsable_documento");
       const id_area_raw = formData.get("id_area");
       const nomenclatura = formData.get("nomenclatura") || "";
       const nombre_documento = formData.get("nombre_documento") || "";
@@ -179,25 +238,22 @@ export async function POST(request) {
           { status: 400 },
         );
       }
-      if (
-        !emp_id_solicitante ||
-        !solicitante ||
-        !emp_id_responsable ||
-        !responsable_documento
-      ) {
+      if (!emp_id_solicitante || !solicitante) {
         return NextResponse.json(
-          { error: "Datos de solicitante y responsable son requeridos" },
+          { error: "Datos del solicitante son requeridos" },
           { status: 400 },
         );
       }
 
       const archivos = formData.getAll("archivos");
 
+      const motivoNorm = normalizeMotivoSolicitud(motivo);
+
       const [ins] = await conn.query(
         `INSERT INTO solicitudes
         (tipo, estado, id_documento, fecha_alta, emp_id_solicitante, solicitante,
-         nomenclatura, nombre_documento, id_area, emp_id_responsable, responsable_documento, motivo)
-        VALUES ('cambio', 'pendiente', ?, CURDATE(), ?, ?, ?, ?, ?, ?, ?, ?)`,
+         nomenclatura, nombre_documento, id_area, motivo, status)
+        VALUES ('cambio', 'pendiente', ?, CURDATE(), ?, ?, ?, ?, ?, ?, 'pendiente')`,
         [
           id_documento,
           emp_id_solicitante,
@@ -205,9 +261,7 @@ export async function POST(request) {
           nomenclatura || null,
           nombre_documento || null,
           id_area_raw || null,
-          emp_id_responsable,
-          responsable_documento,
-          String(motivo).trim(),
+          motivoNorm,
         ],
       );
 

@@ -16,7 +16,6 @@ import {
   CardContent,
   IconButton,
   CircularProgress,
-  InputAdornment,
   List,
   ListItemButton,
   ListItemText,
@@ -30,7 +29,6 @@ import {
   PictureAsPdf,
   InsertDriveFile,
   Slideshow,
-  Person,
   Search,
   EditNote,
   PostAdd,
@@ -56,7 +54,7 @@ const textFieldSx = {
   "& .MuiFormHelperText-root": { color: "rgba(30, 58, 138, 0.75)" },
 };
 
-const stepsCambio = ["Documento y motivo", "Cargar archivos", "Aprobadores"];
+const stepsCambio = ["Documento y motivo", "Cargar archivos"];
 
 function SolicitudCambioDocumento({ onVolver }) {
   const [activeStep, setActiveStep] = useState(0);
@@ -68,14 +66,7 @@ function SolicitudCambioDocumento({ onVolver }) {
   const [motivo, setMotivo] = useState("");
   const [formData, setFormData] = useState({
     archivos: [],
-    emp_id_responsable: "",
-    responsable_documento: "",
   });
-  const [loadingEmpleadoResponsable, setLoadingEmpleadoResponsable] =
-    useState(false);
-  const [errorEmpleadoResponsable, setErrorEmpleadoResponsable] = useState("");
-  const [datosEmpleadoResponsable, setDatosEmpleadoResponsable] =
-    useState(null);
   const [empIdSolicitante, setEmpIdSolicitante] = useState("");
   const [nombreSolicitante, setNombreSolicitante] = useState("");
   const [loadingSolicitante, setLoadingSolicitante] = useState(false);
@@ -101,11 +92,6 @@ function SolicitudCambioDocumento({ onVolver }) {
             100,
           );
         }
-        if (infoUser.emp_id_jefe) {
-          const jid = infoUser.emp_id_jefe.toString();
-          setFormData((prev) => ({ ...prev, emp_id_responsable: jid }));
-          setTimeout(() => buscarEmpleadoResponsable(jid), 200);
-        }
       }
     } catch (e) {
       console.error(e);
@@ -125,35 +111,6 @@ function SolicitudCambioDocumento({ onVolver }) {
       console.error(e);
     } finally {
       setLoadingSolicitante(false);
-    }
-  };
-
-  const buscarEmpleadoResponsable = async (empId) => {
-    if (!empId?.trim()) {
-      setErrorEmpleadoResponsable("ID de responsable requerido");
-      return;
-    }
-    setLoadingEmpleadoResponsable(true);
-    setErrorEmpleadoResponsable("");
-    setDatosEmpleadoResponsable(null);
-    try {
-      const response = await fetch(`/api/empleados/${empId.trim()}`);
-      const data = await response.json();
-      if (!response.ok) {
-        setErrorEmpleadoResponsable(data.error || "Error al buscar empleado");
-        setFormData((prev) => ({ ...prev, responsable_documento: "" }));
-      } else {
-        setDatosEmpleadoResponsable(data);
-        setFormData((prev) => ({
-          ...prev,
-          responsable_documento: data.nombre || "",
-        }));
-      }
-    } catch (e) {
-      setErrorEmpleadoResponsable("Error de conexión");
-      setFormData((prev) => ({ ...prev, responsable_documento: "" }));
-    } finally {
-      setLoadingEmpleadoResponsable(false);
     }
   };
 
@@ -217,22 +174,8 @@ function SolicitudCambioDocumento({ onVolver }) {
     return true;
   };
 
-  const validateStep2 = () => {
-    const e = {};
-    if (!formData.emp_id_responsable.trim()) {
-      e.emp_id_responsable = "El ID del responsable es requerido";
-    }
-    if (!formData.responsable_documento.trim()) {
-      e.responsable_documento = "Debe indicar el responsable del documento";
-    }
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
   const handleNext = () => {
     if (activeStep === 0 && !validateStep0()) return;
-    if (activeStep === 1 && !validateStep1()) return;
-    if (activeStep === 2 && !validateStep2()) return;
     setActiveStep((s) => s + 1);
   };
 
@@ -293,12 +236,7 @@ function SolicitudCambioDocumento({ onVolver }) {
   };
 
   const handleSubmit = async () => {
-    if (!validateStep2()) {
-      setSubmitError("Complete los datos de aprobación");
-      return;
-    }
-    if (formData.archivos.length === 0) {
-      setSubmitError("Debe adjuntar al menos un archivo");
+    if (!validateStep1()) {
       return;
     }
 
@@ -325,8 +263,6 @@ function SolicitudCambioDocumento({ onVolver }) {
       }
       fd.append("emp_id_solicitante", emp_id_solicitante.trim());
       fd.append("solicitante", solicitante.trim());
-      fd.append("emp_id_responsable", formData.emp_id_responsable);
-      fd.append("responsable_documento", formData.responsable_documento);
       formData.archivos.forEach((f) => fd.append("archivos", f));
 
       const response = await fetch("/api/solicitudes", {
@@ -344,11 +280,7 @@ function SolicitudCambioDocumento({ onVolver }) {
         setDocumentoSeleccionado(null);
         setResultados([]);
         setBusqueda("");
-        setFormData({
-          archivos: [],
-          emp_id_responsable: formData.emp_id_responsable,
-          responsable_documento: formData.responsable_documento,
-        });
+        setFormData({ archivos: [] });
         setActiveStep(0);
         setSubmitSuccess(false);
       }, 2200);
@@ -487,10 +419,11 @@ function SolicitudCambioDocumento({ onVolver }) {
                     });
                   }
                 }}
+                inputProps={{ maxLength: 300 }}
                 error={!!errors.motivo}
                 helperText={
                   errors.motivo ||
-                  "Indique qué debe actualizarse y el contexto del cambio"
+                  "Indique qué debe actualizarse y el contexto del cambio (máx. 300 caracteres)"
                 }
                 required
                 sx={{
@@ -625,54 +558,6 @@ function SolicitudCambioDocumento({ onVolver }) {
             )}
           </Box>
         );
-      case 2:
-        return (
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="ID Empleado Responsable"
-                value={formData.emp_id_responsable}
-                error={!!errors.emp_id_responsable || !!errorEmpleadoResponsable}
-                helperText={
-                  errors.emp_id_responsable ||
-                  errorEmpleadoResponsable ||
-                  "Desde tu perfil (jefe)"
-                }
-                disabled
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      {loadingEmpleadoResponsable ? (
-                        <CircularProgress size={20} sx={{ color: "#1e3a8a" }} />
-                      ) : (
-                        <Person sx={{ color: "#1e3a8a" }} />
-                      )}
-                    </InputAdornment>
-                  ),
-                }}
-                sx={textFieldSx}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Responsable del documento"
-                value={formData.responsable_documento}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    responsable_documento: e.target.value,
-                  }))
-                }
-                error={!!errors.responsable_documento}
-                helperText={errors.responsable_documento}
-                disabled={!datosEmpleadoResponsable}
-                sx={textFieldSx}
-              />
-            </Grid>
-          </Grid>
-        );
       default:
         return null;
     }
@@ -707,8 +592,8 @@ function SolicitudCambioDocumento({ onVolver }) {
         variant="body2"
         sx={{ color: "rgba(30, 58, 138, 0.75)", textAlign: "center", mb: 3 }}
       >
-        Busque el documento por nomenclatura, describa el cambio y complete la
-        aprobación.
+        Busque el documento por nomenclatura, describa el cambio y adjunte los
+        archivos para enviar la solicitud.
       </Typography>
 
       <Stepper

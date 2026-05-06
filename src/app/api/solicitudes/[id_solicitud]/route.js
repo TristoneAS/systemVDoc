@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { conn } from "@/libs/system_v_docs";
+import {
+  normalizeEmpId,
+  actualizarStatusSolicitudPorAprobaciones,
+  STATUS_APROBACION_APROBADO,
+} from "@/libs/aprobaciones";
 import fs from "fs";
 import path from "path";
 
@@ -30,6 +35,21 @@ function normalizeArchivosJson(raw) {
   return [];
 }
 
+const COMENTARIO_DECISION_MAX = 2000;
+
+function normalizeComentarioDecision(raw) {
+  const s = String(raw ?? "").trim();
+  if (!s) {
+    return {
+      error:
+        "Debe escribir un comentario con el motivo de su decisión.",
+    };
+  }
+  return {
+    value: s.length > COMENTARIO_DECISION_MAX ? s.slice(0, COMENTARIO_DECISION_MAX) : s,
+  };
+}
+
 export async function PATCH(request, { params }) {
   const resolved = await params;
   const id_solicitud = parseInt(resolved.id_solicitud, 10);
@@ -55,6 +75,12 @@ export async function PATCH(request, { params }) {
     );
   }
 
+  const comentarioRes = normalizeComentarioDecision(body.comentario);
+  if (comentarioRes.error) {
+    return NextResponse.json({ error: comentarioRes.error }, { status: 400 });
+  }
+  const comentario = comentarioRes.value;
+
   const connection = await conn.getConnection();
   try {
     await connection.beginTransaction();
@@ -72,7 +98,7 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    const sol = rows[0];
+    let sol = rows[0];
     if (sol.estado !== "pendiente") {
       await connection.rollback();
       return NextResponse.json(
@@ -83,13 +109,59 @@ export async function PATCH(request, { params }) {
 
     if (accion === "rechazar") {
       await connection.query(
-        `UPDATE solicitudes SET estado = 'rechazada', fecha_resolucion = NOW() WHERE id_solicitud = ?`,
-        [id_solicitud],
+        `UPDATE solicitudes SET estado = 'rechazada', fecha_resolucion = NOW(), status = 'rechazada', comentario = ? WHERE id_solicitud = ?`,
+        [comentario, id_solicitud],
       );
       await connection.commit();
       return NextResponse.json({
         success: true,
         message: "Solicitud rechazada",
+      });
+    }
+
+    const emp_id_actor = normalizeEmpId(body.emp_id_actor);
+    if (!emp_id_actor) {
+      await connection.rollback();
+      return NextResponse.json(
+        { error: "emp_id_actor es requerido para registrar una aprobación" },
+        { status: 400 },
+      );
+    }
+
+    const [updResult] = await connection.query(
+      `UPDATE aprobaciones SET status = ?, comentario = ? WHERE id_solicitud = ? AND emp_id = ? AND status = 'pendiente'`,
+      [
+        STATUS_APROBACION_APROBADO,
+        comentario,
+        id_solicitud,
+        emp_id_actor,
+      ],
+    );
+
+    if (!updResult.affectedRows) {
+      await connection.rollback();
+      return NextResponse.json(
+        {
+          error:
+            "No tiene una aprobación pendiente para esta solicitud o ya registró su visto bueno.",
+        },
+        { status: 400 },
+      );
+    }
+
+    await actualizarStatusSolicitudPorAprobaciones(connection, id_solicitud);
+
+    const [solRefreshed] = await connection.query(
+      `SELECT * FROM solicitudes WHERE id_solicitud = ?`,
+      [id_solicitud],
+    );
+    sol = solRefreshed[0];
+
+    if (sol.status !== "aprobada") {
+      await connection.commit();
+      return NextResponse.json({
+        success: true,
+        message: "Visto bueno registrado. Quedan aprobaciones pendientes.",
       });
     }
 

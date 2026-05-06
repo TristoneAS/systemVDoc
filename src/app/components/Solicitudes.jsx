@@ -17,8 +17,13 @@ import {
   Alert,
   Link,
   Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
 } from "@mui/material";
-import { Check, Close, InsertDriveFile } from "@mui/icons-material";
+import { Check, Close, InsertDriveFile, ListAlt } from "@mui/icons-material";
 import HexagonMenu from "./HexagonMenu";
 
 function formatFecha(v) {
@@ -102,6 +107,17 @@ function Solicitudes() {
   const [banner, setBanner] = useState(null);
   const [sinEmpEnSesion, setSinEmpEnSesion] = useState(false);
   const [schemaFase2Pendiente, setSchemaFase2Pendiente] = useState(false);
+  const [dialogAprobacionesOpen, setDialogAprobacionesOpen] = useState(false);
+  const [dialogAprobacionesId, setDialogAprobacionesId] = useState(null);
+  const [dialogAprobacionesRows, setDialogAprobacionesRows] = useState([]);
+  const [dialogAprobacionesLoading, setDialogAprobacionesLoading] =
+    useState(false);
+  const [dialogAprobacionesError, setDialogAprobacionesError] = useState("");
+  const [resolverModalOpen, setResolverModalOpen] = useState(false);
+  const [resolverModalAccion, setResolverModalAccion] = useState(null);
+  const [resolverModalId, setResolverModalId] = useState(null);
+  const [resolverComentario, setResolverComentario] = useState("");
+  const [resolverComentarioError, setResolverComentarioError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -136,7 +152,32 @@ function Solicitudes() {
     load();
   }, [load]);
 
-  const resolver = async (id_solicitud, accion) => {
+  const abrirModalResolver = (id_solicitud, accion) => {
+    const empId = getMiEmpId();
+    if (!empId) {
+      setBanner({
+        severity: "error",
+        text: "No hay número de empleado en la sesión. Vuelva a iniciar sesión.",
+      });
+      return;
+    }
+    setResolverModalId(id_solicitud);
+    setResolverModalAccion(accion);
+    setResolverComentario("");
+    setResolverComentarioError("");
+    setResolverModalOpen(true);
+  };
+
+  const cerrarModalResolver = () => {
+    if (actionId !== null) return;
+    setResolverModalOpen(false);
+    setResolverModalId(null);
+    setResolverModalAccion(null);
+    setResolverComentario("");
+    setResolverComentarioError("");
+  };
+
+  const resolver = async (id_solicitud, accion, comentario) => {
     const empId = getMiEmpId();
     if (!empId) {
       setBanner({
@@ -151,7 +192,11 @@ function Solicitudes() {
       const res = await fetch(`/api/solicitudes/${id_solicitud}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accion, emp_id_actor: empId }),
+        body: JSON.stringify({
+          accion,
+          emp_id_actor: empId,
+          comentario,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -168,6 +213,56 @@ function Solicitudes() {
     } finally {
       setActionId(null);
     }
+  };
+
+  const confirmarModalResolver = async () => {
+    const texto = resolverComentario.trim();
+    if (!texto) {
+      setResolverComentarioError(
+        "Indique el motivo de su decisión (comentario obligatorio).",
+      );
+      return;
+    }
+    setResolverComentarioError("");
+    setResolverModalOpen(false);
+    const id = resolverModalId;
+    const acc = resolverModalAccion;
+    setResolverModalId(null);
+    setResolverModalAccion(null);
+    setResolverComentario("");
+    if (id != null && acc) {
+      await resolver(id, acc, texto);
+    }
+  };
+
+  const abrirAprobaciones = async (id_solicitud) => {
+    setDialogAprobacionesOpen(true);
+    setDialogAprobacionesId(id_solicitud);
+    setDialogAprobacionesRows([]);
+    setDialogAprobacionesError("");
+    setDialogAprobacionesLoading(true);
+    try {
+      const res = await fetch(`/api/solicitudes/${id_solicitud}/aprobaciones`);
+      const data = await res.json();
+      if (!res.ok) {
+        setDialogAprobacionesError(
+          data.error || "No se pudieron cargar las aprobaciones",
+        );
+        return;
+      }
+      setDialogAprobacionesRows(Array.isArray(data.data) ? data.data : []);
+    } catch {
+      setDialogAprobacionesError("Error de conexión");
+    } finally {
+      setDialogAprobacionesLoading(false);
+    }
+  };
+
+  const cerrarDialogAprobaciones = () => {
+    setDialogAprobacionesOpen(false);
+    setDialogAprobacionesId(null);
+    setDialogAprobacionesRows([]);
+    setDialogAprobacionesError("");
   };
 
   return (
@@ -455,58 +550,91 @@ function Solicitudes() {
                         {formatFecha(r.fecha_creacion)}
                       </TableCell>
                       <TableCell align="right">
-                        {r.estado === "pendiente" ? (
-                          <Box
+                        <Box
+                          sx={{
+                            display: "flex",
+                            gap: 1,
+                            justifyContent: "flex-end",
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<ListAlt />}
+                            disabled={
+                              dialogAprobacionesLoading &&
+                              dialogAprobacionesId === r.id_solicitud
+                            }
+                            onClick={() => abrirAprobaciones(r.id_solicitud)}
                             sx={{
-                              display: "flex",
-                              gap: 1,
-                              justifyContent: "flex-end",
-                              flexWrap: "wrap",
+                              color: "#1e3a8a",
+                              borderColor: "rgba(65, 105, 225, 0.35)",
+                              textTransform: "none",
+                              "&:hover": {
+                                borderColor: "#4169E1",
+                                bgcolor: "rgba(65, 105, 225, 0.06)",
+                              },
                             }}
                           >
-                            <Button
-                              size="small"
-                              variant="contained"
-                              startIcon={
-                                actionId === r.id_solicitud ? (
-                                  <CircularProgress size={16} sx={{ color: "#1e3a8a" }} />
-                                ) : (
-                                  <Check />
-                                )
-                              }
-                              disabled={
-                                actionId !== null || !puedeAprobar || sinEmpEnSesion
-                              }
-                              onClick={() => resolver(r.id_solicitud, "aprobar")}
-                              sx={{
-                                bgcolor: "#e0e7ff",
-                                color: "#1e3a8a",
-                                border: "1px solid #4169E1",
-                                textTransform: "none",
-                                "&:hover": { bgcolor: "#c7d2fe", color: "#1e3a8a" },
-                              }}
-                            >
-                              Aprobar
-                            </Button>
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              color="error"
-                              startIcon={<Close />}
-                              disabled={
-                                actionId !== null || !puedeRechazar || sinEmpEnSesion
-                              }
-                              onClick={() => resolver(r.id_solicitud, "rechazar")}
-                              sx={{ textTransform: "none" }}
-                            >
-                              Rechazar
-                            </Button>
-                          </Box>
-                        ) : (
-                          <Typography variant="caption" sx={{ color: "rgba(30, 58, 138, 0.45)" }}>
-                            —
-                          </Typography>
-                        )}
+                            Ver aprobaciones
+                          </Button>
+                          {r.estado === "pendiente" ? (
+                            <>
+                              <Button
+                                size="small"
+                                variant="contained"
+                                startIcon={
+                                  actionId === r.id_solicitud ? (
+                                    <CircularProgress
+                                      size={16}
+                                      sx={{ color: "#1e3a8a" }}
+                                    />
+                                  ) : (
+                                    <Check />
+                                  )
+                                }
+                                disabled={
+                                  actionId !== null ||
+                                  !puedeAprobar ||
+                                  sinEmpEnSesion
+                                }
+                                onClick={() =>
+                                  abrirModalResolver(r.id_solicitud, "aprobar")
+                                }
+                                sx={{
+                                  bgcolor: "#e0e7ff",
+                                  color: "#1e3a8a",
+                                  border: "1px solid #4169E1",
+                                  textTransform: "none",
+                                  "&:hover": {
+                                    bgcolor: "#c7d2fe",
+                                    color: "#1e3a8a",
+                                  },
+                                }}
+                              >
+                                Aprobar
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="error"
+                                startIcon={<Close />}
+                                disabled={
+                                  actionId !== null ||
+                                  !puedeRechazar ||
+                                  sinEmpEnSesion
+                                }
+                                onClick={() =>
+                                  abrirModalResolver(r.id_solicitud, "rechazar")
+                                }
+                                sx={{ textTransform: "none" }}
+                              >
+                                Rechazar
+                              </Button>
+                            </>
+                          ) : null}
+                        </Box>
                       </TableCell>
                     </TableRow>
                     );
@@ -517,6 +645,204 @@ function Solicitudes() {
           </TableContainer>
         )}
       </Paper>
+
+      <Dialog
+        open={resolverModalOpen}
+        onClose={cerrarModalResolver}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            border: "1px solid rgba(65, 105, 225, 0.16)",
+            borderRadius: 2,
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: "#1e3a8a", fontWeight: 700 }}>
+          {resolverModalAccion === "rechazar"
+            ? "Rechazar solicitud"
+            : "Aprobar solicitud"}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography
+            variant="body2"
+            sx={{ color: "rgba(30, 58, 138, 0.85)", mb: 2 }}
+          >
+            Describa el motivo de su decisión. El comentario quedará registrado en
+            la base de datos.
+          </Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            multiline
+            minRows={4}
+            label="Comentario"
+            placeholder="Ej. Documentación incompleta / Conforme con el cambio propuesto…"
+            value={resolverComentario}
+            onChange={(e) => {
+              setResolverComentario(e.target.value);
+              if (resolverComentarioError) setResolverComentarioError("");
+            }}
+            error={Boolean(resolverComentarioError)}
+            helperText={
+              resolverComentarioError ||
+              `Obligatorio. Máximo 2000 caracteres (${resolverComentario.length}/2000).`
+            }
+            inputProps={{ maxLength: 2000 }}
+            sx={{
+              "& .MuiOutlinedInput-root": { color: "#1e3a8a" },
+              "& .MuiInputLabel-root": { color: "rgba(30, 58, 138, 0.75)" },
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={cerrarModalResolver}
+            disabled={actionId !== null}
+            sx={{ color: "#475569", textTransform: "none" }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={confirmarModalResolver}
+            disabled={actionId !== null}
+            sx={{
+              bgcolor:
+                resolverModalAccion === "rechazar" ? "#fef2f2" : "#e0e7ff",
+              color: resolverModalAccion === "rechazar" ? "#b91c1c" : "#1e3a8a",
+              border:
+                resolverModalAccion === "rechazar"
+                  ? "1px solid #fecaca"
+                  : "1px solid #4169E1",
+              textTransform: "none",
+              "&:hover": {
+                bgcolor:
+                  resolverModalAccion === "rechazar" ? "#fee2e2" : "#c7d2fe",
+              },
+            }}
+          >
+            {resolverModalAccion === "rechazar"
+              ? "Confirmar rechazo"
+              : "Confirmar aprobación"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={dialogAprobacionesOpen}
+        onClose={cerrarDialogAprobaciones}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            border: "1px solid rgba(65, 105, 225, 0.16)",
+            borderRadius: 2,
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: "#1e3a8a", fontWeight: 700 }}>
+          Aprobaciones
+          {dialogAprobacionesId != null && (
+            <Typography
+              component="span"
+              variant="body2"
+              sx={{
+                display: "block",
+                mt: 0.5,
+                fontWeight: 400,
+                color: "rgba(30, 58, 138, 0.75)",
+              }}
+            >
+              Solicitud #{dialogAprobacionesId} · tabla{" "}
+              <code style={{ fontSize: "0.85em" }}>aprobaciones</code>
+            </Typography>
+          )}
+        </DialogTitle>
+        <DialogContent dividers>
+          {dialogAprobacionesLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <CircularProgress sx={{ color: "#1e3a8a" }} />
+            </Box>
+          ) : dialogAprobacionesError ? (
+            <Alert severity="error">{dialogAprobacionesError}</Alert>
+          ) : dialogAprobacionesRows.length === 0 ? (
+            <Typography sx={{ color: "rgba(30, 58, 138, 0.75)" }}>
+              No hay registros de aprobación para esta solicitud.
+            </Typography>
+          ) : (
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600, color: "#475569" }}>
+                      ID
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: "#475569" }}>
+                      Empleado
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: "#475569" }}>
+                      Nombre
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: "#475569" }}>
+                      Correo
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: "#475569" }}>
+                      Status
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: "#475569" }}>
+                      Comentario
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {dialogAprobacionesRows.map((a) => (
+                    <TableRow key={a.id}>
+                      <TableCell sx={{ color: "#1e3a8a" }}>{a.id}</TableCell>
+                      <TableCell sx={{ color: "#1e3a8a" }}>{a.emp_id}</TableCell>
+                      <TableCell sx={{ color: "#334155" }}>
+                        {a.emp_nombre || "—"}
+                      </TableCell>
+                      <TableCell sx={{ color: "#334155", wordBreak: "break-all" }}>
+                        {a.emp_correo || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          size="small"
+                          label={a.status || "—"}
+                          sx={{
+                            textTransform: "capitalize",
+                            bgcolor: "rgba(65, 105, 225, 0.12)",
+                            color: "#1e3a8a",
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          color: "#334155",
+                          maxWidth: 220,
+                          wordBreak: "break-word",
+                          verticalAlign: "top",
+                        }}
+                      >
+                        {a.comentario?.trim() ? a.comentario : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={cerrarDialogAprobaciones}
+            sx={{ color: "#1e3a8a", textTransform: "none" }}
+          >
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </HexagonMenu>
   );
 }

@@ -256,6 +256,14 @@ function NuevoDocumento({
         }
         formDataToSend.append("emp_id_solicitante", emp_id_solicitante);
         formDataToSend.append("solicitante", solicitante);
+        const partesMotivo = [
+          "Alta de nuevo documento",
+          formData.nombre_documento.trim(),
+          formData.nomenclatura.trim(),
+        ].filter((x) => x.length > 0);
+        const motivoSolicitud =
+          partesMotivo.join(" · ").slice(0, 300) || "Alta de nuevo documento";
+        formDataToSend.append("motivo", motivoSolicitud);
       }
 
       const response = await fetch(

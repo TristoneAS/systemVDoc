@@ -124,3 +124,32 @@ export async function crearAprobacionesSolicitud(
 
   return registros.length;
 }
+
+/** Valor en `aprobaciones.status` cuando el visto bueno está completo. */
+export const STATUS_APROBACION_APROBADO = "aprobado";
+
+/**
+ * Actualiza `solicitudes.status`: `aprobada` solo si existe al menos una fila en
+ * `aprobaciones` y todas tienen `status = 'aprobado'`; en caso contrario `pendiente`.
+ */
+export async function actualizarStatusSolicitudPorAprobaciones(
+  connection,
+  idSolicitud,
+) {
+  const [[stats]] = await connection.query(
+    `SELECT
+       COUNT(*) AS total,
+       SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) AS aprobados
+     FROM aprobaciones WHERE id_solicitud = ?`,
+    [STATUS_APROBACION_APROBADO, idSolicitud],
+  );
+  const total = Number(stats?.total) || 0;
+  const aprobados = Number(stats?.aprobados) || 0;
+  const nuevo =
+    total > 0 && aprobados === total ? "aprobada" : "pendiente";
+  await connection.query(
+    `UPDATE solicitudes SET status = ? WHERE id_solicitud = ?`,
+    [nuevo, idSolicitud],
+  );
+  return nuevo;
+}
