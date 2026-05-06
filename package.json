@@ -1,0 +1,21 @@
+{
+  "name": "system-v-docs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.7",
+    "@mui/material": "^7.3.7",
+    "mysql2": "^3.16.1",
+    "next": "16.1.1",
+    "nodemailer": "^8.0.4",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  }
+}

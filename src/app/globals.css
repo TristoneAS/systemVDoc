@@ -1,0 +1,38 @@
+:root {
+  --background: #ffffff;
+  --foreground: #1e3a8a;
+  --accent-soft: #e8ecff;
+  --accent-mid: #7999ff;
+  --accent-strong: #4169E1;
+  --border-subtle: rgba(65, 105, 225, 0.2);
+  --text-muted: #64748b;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+html {
+  color-scheme: light;
+}
