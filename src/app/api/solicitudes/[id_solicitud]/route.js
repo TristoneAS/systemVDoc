@@ -4,6 +4,7 @@ import {
   normalizeEmpId,
   actualizarStatusSolicitudPorAprobaciones,
   STATUS_APROBACION_APROBADO,
+  STATUS_APROBACION_RECHAZADO,
 } from "@/libs/aprobaciones";
 import fs from "fs";
 import path from "path";
@@ -107,10 +108,41 @@ export async function PATCH(request, { params }) {
       );
     }
 
+    const emp_id_actor = normalizeEmpId(body.emp_id_actor);
+
     if (accion === "rechazar") {
+      if (!emp_id_actor) {
+        await connection.rollback();
+        return NextResponse.json(
+          {
+            error:
+              "emp_id_actor es requerido para registrar el rechazo con su comentario",
+          },
+          { status: 400 },
+        );
+      }
+      const [rejResult] = await connection.query(
+        `UPDATE aprobaciones SET status = ?, comentario = ? WHERE id_solicitud = ? AND emp_id = ? AND status = 'pendiente'`,
+        [
+          STATUS_APROBACION_RECHAZADO,
+          comentario,
+          id_solicitud,
+          emp_id_actor,
+        ],
+      );
+      if (!rejResult.affectedRows) {
+        await connection.rollback();
+        return NextResponse.json(
+          {
+            error:
+              "No tiene una aprobación pendiente para esta solicitud o ya registró su decisión.",
+          },
+          { status: 400 },
+        );
+      }
       await connection.query(
-        `UPDATE solicitudes SET estado = 'rechazada', fecha_resolucion = NOW(), status = 'rechazada', comentario = ? WHERE id_solicitud = ?`,
-        [comentario, id_solicitud],
+        `UPDATE solicitudes SET estado = 'rechazada', fecha_resolucion = NOW(), status = 'rechazada' WHERE id_solicitud = ?`,
+        [id_solicitud],
       );
       await connection.commit();
       return NextResponse.json({
@@ -119,7 +151,6 @@ export async function PATCH(request, { params }) {
       });
     }
 
-    const emp_id_actor = normalizeEmpId(body.emp_id_actor);
     if (!emp_id_actor) {
       await connection.rollback();
       return NextResponse.json(

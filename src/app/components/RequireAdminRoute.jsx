@@ -35,7 +35,7 @@ function RequireAdminRoute({ children }) {
           minHeight: "40vh",
         }}
       >
-        <CircularProgress sx={{ color: "#1e3a8a" }} />
+        <CircularProgress sx={{ color: "#1976D2" }} />
       </Box>
     );
   }

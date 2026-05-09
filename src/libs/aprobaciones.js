@@ -128,6 +128,9 @@ export async function crearAprobacionesSolicitud(
 /** Valor en `aprobaciones.status` cuando el visto bueno está completo. */
 export const STATUS_APROBACION_APROBADO = "aprobado";
 
+/** Valor en `aprobaciones.status` cuando el aprobador rechaza la solicitud. */
+export const STATUS_APROBACION_RECHAZADO = "rechazado";
+
 /**
  * Actualiza `solicitudes.status`: `aprobada` solo si existe al menos una fila en
  * `aprobaciones` y todas tienen `status = 'aprobado'`; en caso contrario `pendiente`.

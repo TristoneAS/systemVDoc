@@ -40,18 +40,18 @@ import { getSolicitanteParaSolicitud } from "./Solicitudes";
 
 const textFieldSx = {
   "& .MuiOutlinedInput-root": {
-    backgroundColor: "#f4f6ff",
-    color: "#1e3a8a",
-    "& fieldset": { borderColor: "rgba(65, 105, 225, 0.16)" },
-    "&:hover fieldset": { borderColor: "#4169E1" },
-    "&.Mui-focused fieldset": { borderColor: "#4169E1" },
-    "& .MuiInputBase-input": { color: "#1e3a8a" },
+    backgroundColor: "#FFFFFF",
+    color: "#212121",
+    "& fieldset": { borderColor: "rgba(0, 0, 0, 0.12)" },
+    "&:hover fieldset": { borderColor: "#1976D2" },
+    "&.Mui-focused fieldset": { borderColor: "#1976D2" },
+    "& .MuiInputBase-input": { color: "#212121" },
   },
   "& .MuiInputLabel-root": {
-    color: "rgba(30, 58, 138, 0.75)",
-    "&.Mui-focused": { color: "#1e3a8a" },
+    color: "#757575",
+    "&.Mui-focused": { color: "#1976D2" },
   },
-  "& .MuiFormHelperText-root": { color: "rgba(30, 58, 138, 0.75)" },
+  "& .MuiFormHelperText-root": { color: "#757575" },
 };
 
 const stepsCambio = ["Documento y motivo", "Cargar archivos"];
@@ -218,19 +218,19 @@ function SolicitudCambioDocumento({ onVolver }) {
 
   const getFileIcon = (file) => {
     if (file.type.includes("pdf")) {
-      return <PictureAsPdf sx={{ color: "#1e3a8a" }} />;
+      return <PictureAsPdf sx={{ color: "#1976D2" }} />;
     }
     if (file.type.includes("excel") || file.type.includes("spreadsheet")) {
-      return <DescriptionOutlined sx={{ color: "#1e3a8a" }} />;
+      return <DescriptionOutlined sx={{ color: "#1976D2" }} />;
     }
     if (file.type.includes("word") || file.type.includes("msword")) {
-      return <Description sx={{ color: "#1e3a8a" }} />;
+      return <Description sx={{ color: "#1976D2" }} />;
     }
     if (
       file.type.includes("powerpoint") ||
       file.type.includes("presentation")
     ) {
-      return <Slideshow sx={{ color: "#1e3a8a" }} />;
+      return <Slideshow sx={{ color: "#1976D2" }} />;
     }
     return <InsertDriveFile />;
   };
@@ -319,15 +319,15 @@ function SolicitudCambioDocumento({ onVolver }) {
                   onClick={handleBuscarDocumentos}
                   disabled={buscando}
                   sx={{
-                    backgroundColor: "#e0e7ff",
-                    color: "#1e3a8a",
-                    border: "1px solid #4169E1",
+                    backgroundColor: "#E3F2FD",
+                    color: "#1976D2",
+                    border: "1px solid #1976D2",
                     textTransform: "none",
                     fontWeight: 600,
                     px: 3,
                     alignSelf: "flex-start",
                     mt: 0.5,
-                    "&:hover": { backgroundColor: "#c7d2fe", color: "#1e3a8a" },
+                    "&:hover": { backgroundColor: "#BBDEFB", color: "#1976D2" },
                   }}
                 >
                   Buscar
@@ -341,15 +341,15 @@ function SolicitudCambioDocumento({ onVolver }) {
             </Grid>
             {resultados.length > 1 && (
               <Grid item xs={12}>
-                <Typography sx={{ color: "rgba(30, 58, 138, 0.75)", mb: 1 }}>
+                <Typography sx={{ color: "#757575", mb: 1 }}>
                   Seleccione el documento:
                 </Typography>
                 <List
                   dense
                   sx={{
-                    bgcolor: "#f4f6ff",
+                    bgcolor: "#E3F2FD",
                     borderRadius: 2,
-                    border: "1px solid rgba(65, 105, 225, 0.16)",
+                    border: "1px solid rgba(25, 118, 210, 0.16)",
                   }}
                 >
                   {resultados.map((doc) => (
@@ -363,8 +363,8 @@ function SolicitudCambioDocumento({ onVolver }) {
                       <ListItemText
                         primary={doc.nombre_documento}
                         secondary={`${doc.nomenclatura} · ${doc.id_documento}`}
-                        primaryTypographyProps={{ sx: { color: "#1e3a8a" } }}
-                        secondaryTypographyProps={{ sx: { color: "rgba(30, 58, 138, 0.75)" } }}
+                        primaryTypographyProps={{ sx: { color: "#1976D2" } }}
+                        secondaryTypographyProps={{ sx: { color: "#757575" } }}
                       />
                     </ListItemButton>
                   ))}
@@ -375,27 +375,27 @@ function SolicitudCambioDocumento({ onVolver }) {
               <Grid item xs={12}>
                 <Card
                   sx={{
-                    bgcolor: "#e8ecff",
-                    border: "1px solid rgba(65, 105, 225, 0.2)",
+                    bgcolor: "#E3F2FD",
+                    border: "1px solid rgba(25, 118, 210, 0.2)",
                   }}
                 >
                   <CardContent>
-                    <Typography sx={{ color: "#334155", fontWeight: 600, mb: 1 }}>
+                    <Typography sx={{ color: "#616161", fontWeight: 600, mb: 1 }}>
                       Documento seleccionado
                     </Typography>
-                    <Typography sx={{ color: "#1e3a8a" }}>
+                    <Typography sx={{ color: "#1976D2" }}>
                       {documentoSeleccionado.nombre_documento}
                     </Typography>
                     <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mt: 1 }}>
                       <Chip
                         size="small"
                         label={documentoSeleccionado.nomenclatura}
-                        sx={{ bgcolor: "rgba(65, 105, 225, 0.14)", color: "#c7d2fe" }}
+                        sx={{ bgcolor: "rgba(25, 118, 210, 0.14)", color: "#BBDEFB" }}
                       />
                       <Chip
                         size="small"
                         label={documentoSeleccionado.id_documento}
-                        sx={{ bgcolor: "rgba(65, 105, 225, 0.14)", color: "#1e3a8a" }}
+                        sx={{ bgcolor: "rgba(25, 118, 210, 0.14)", color: "#1976D2" }}
                       />
                     </Box>
                   </CardContent>
@@ -429,7 +429,7 @@ function SolicitudCambioDocumento({ onVolver }) {
                 sx={{
                   ...textFieldSx,
                   "& .MuiFormHelperText-root": {
-                    color: errors.motivo ? "#b91c1c" : "rgba(30, 58, 138, 0.75)",
+                    color: errors.motivo ? "#b91c1c" : "#757575",
                   },
                 }}
               />
@@ -468,9 +468,9 @@ function SolicitudCambioDocumento({ onVolver }) {
                 flexDirection: "column",
                 alignItems: "center",
                 p: 4,
-                border: "2px dashed rgba(65, 105, 225, 0.16)",
+                border: "2px dashed rgba(25, 118, 210, 0.16)",
                 borderRadius: 3,
-                bgcolor: "rgba(65, 105, 225, 0.08)",
+                bgcolor: "rgba(25, 118, 210, 0.08)",
               }}
             >
               <input
@@ -487,21 +487,21 @@ function SolicitudCambioDocumento({ onVolver }) {
                   component="span"
                   startIcon={<CloudUpload />}
                   sx={{
-                    backgroundColor: "#e0e7ff",
-                    color: "#1e3a8a",
-                    border: "1px solid #4169E1",
+                    backgroundColor: "#E3F2FD",
+                    color: "#1976D2",
+                    border: "1px solid #1976D2",
                     py: 1.5,
                     px: 3,
                     borderRadius: 2,
                     fontWeight: 600,
                     textTransform: "none",
-                    "&:hover": { backgroundColor: "#c7d2fe", color: "#1e3a8a" },
+                    "&:hover": { backgroundColor: "#BBDEFB", color: "#1976D2" },
                   }}
                 >
                   Adjuntar archivos (borradores o evidencia)
                 </Button>
               </label>
-              <Typography variant="caption" sx={{ color: "rgba(30, 58, 138, 0.75)", mt: 2 }}>
+              <Typography variant="caption" sx={{ color: "#757575", mt: 2 }}>
                 .xlsx, .xls, .pdf, .doc, .docx, .ppt, .pptx
               </Typography>
             </Box>
@@ -511,8 +511,8 @@ function SolicitudCambioDocumento({ onVolver }) {
                   <Grid item xs={12} sm={6} md={4} key={index}>
                     <Card
                       sx={{
-                        bgcolor: "#f4f6ff",
-                        border: "1px solid rgba(65, 105, 225, 0.16)",
+                        bgcolor: "#E3F2FD",
+                        border: "1px solid rgba(25, 118, 210, 0.16)",
                       }}
                     >
                       <CardContent>
@@ -529,7 +529,7 @@ function SolicitudCambioDocumento({ onVolver }) {
                               <Typography
                                 variant="body2"
                                 sx={{
-                                  color: "#1e3a8a",
+                                  color: "#1976D2",
                                   fontWeight: 500,
                                   overflow: "hidden",
                                   textOverflow: "ellipsis",
@@ -538,14 +538,14 @@ function SolicitudCambioDocumento({ onVolver }) {
                               >
                                 {file.name}
                               </Typography>
-                              <Typography variant="caption" sx={{ color: "rgba(30, 58, 138, 0.75)" }}>
+                              <Typography variant="caption" sx={{ color: "#757575" }}>
                                 {(file.size / 1024).toFixed(2)} KB
                               </Typography>
                             </Box>
                           </Box>
                           <IconButton
                             onClick={() => handleRemoveFile(index)}
-                            sx={{ color: "#1e3a8a" }}
+                            sx={{ color: "#1976D2" }}
                           >
                             <Delete />
                           </IconButton>
@@ -569,7 +569,7 @@ function SolicitudCambioDocumento({ onVolver }) {
       sx={{
         p: 4,
         backgroundColor: "#ffffff",
-        border: "1px solid rgba(65, 105, 225, 0.16)",
+        border: "1px solid rgba(25, 118, 210, 0.16)",
         borderRadius: 3,
         maxWidth: "900px",
         mx: "auto",
@@ -578,19 +578,19 @@ function SolicitudCambioDocumento({ onVolver }) {
       <Button
         startIcon={<ArrowBack />}
         onClick={onVolver}
-        sx={{ color: "#334155", mb: 2, textTransform: "none" }}
+        sx={{ color: "#616161", mb: 2, textTransform: "none" }}
       >
         Volver a opciones
       </Button>
       <Typography
         variant="h4"
-        sx={{ color: "#1e3a8a", fontWeight: 700, mb: 1, textAlign: "center" }}
+        sx={{ color: "#1976D2", fontWeight: 700, mb: 1, textAlign: "center" }}
       >
         Cambio de documento existente
       </Typography>
       <Typography
         variant="body2"
-        sx={{ color: "rgba(30, 58, 138, 0.75)", textAlign: "center", mb: 3 }}
+        sx={{ color: "#757575", textAlign: "center", mb: 3 }}
       >
         Busque el documento por nomenclatura, describa el cambio y adjunte los
         archivos para enviar la solicitud.
@@ -600,13 +600,13 @@ function SolicitudCambioDocumento({ onVolver }) {
         activeStep={activeStep}
         sx={{
           mb: 4,
-          "& .MuiStepLabel-root .Mui-completed": { color: "#1e3a8a" },
-          "& .MuiStepLabel-label.Mui-completed": { color: "#475569" },
-          "& .MuiStepLabel-root .Mui-active": { color: "#1e3a8a" },
-          "& .MuiStepLabel-label.Mui-active": { color: "#1e3a8a" },
+          "& .MuiStepLabel-root .Mui-completed": { color: "#1976D2" },
+          "& .MuiStepLabel-label.Mui-completed": { color: "#757575" },
+          "& .MuiStepLabel-root .Mui-active": { color: "#1976D2" },
+          "& .MuiStepLabel-label.Mui-active": { color: "#1976D2" },
           "& .MuiStepIcon-root": {
             color: "rgba(255,255,255,0.5)",
-            "&.Mui-active, &.Mui-completed": { color: "#1e3a8a" },
+            "&.Mui-active, &.Mui-completed": { color: "#1976D2" },
           },
         }}
       >
@@ -624,7 +624,7 @@ function SolicitudCambioDocumento({ onVolver }) {
           severity="error"
           sx={{
             mb: 2,
-            bgcolor: "rgba(65, 105, 225, 0.09)",
+            bgcolor: "rgba(25, 118, 210, 0.09)",
             color: "#b91c1c",
             border: "1px solid rgba(239, 68, 68, 0.3)",
           }}
@@ -639,7 +639,7 @@ function SolicitudCambioDocumento({ onVolver }) {
           sx={{
             mb: 2,
             bgcolor: "rgba(34, 197, 94, 0.1)",
-            color: "#1e3a8a",
+            color: "#1976D2",
             border: "1px solid rgba(34, 197, 94, 0.3)",
           }}
         >
@@ -651,7 +651,7 @@ function SolicitudCambioDocumento({ onVolver }) {
         <Button
           disabled={activeStep === 0 || loading}
           onClick={handleBack}
-          sx={{ color: "#1e3a8a" }}
+          sx={{ color: "#1976D2" }}
         >
           Atrás
         </Button>
@@ -661,17 +661,17 @@ function SolicitudCambioDocumento({ onVolver }) {
             onClick={handleSubmit}
             disabled={loading}
             sx={{
-              backgroundColor: loading ? "#cbd5e1" : "#e0e7ff",
-              color: "#1e3a8a",
-              border: loading ? "1px solid #94a3b8" : "1px solid #4169E1",
+              backgroundColor: loading ? "#E0E0E0" : "#E3F2FD",
+              color: "#1976D2",
+              border: loading ? "1px solid #9E9E9E" : "1px solid #1976D2",
               px: 4,
               py: 1,
               borderRadius: 2,
               fontWeight: 600,
               textTransform: "none",
               "&:hover": {
-                backgroundColor: loading ? "#cbd5e1" : "#c7d2fe",
-                color: "#1e3a8a",
+                backgroundColor: loading ? "#E0E0E0" : "#BBDEFB",
+                color: "#1976D2",
               },
             }}
           >
@@ -689,15 +689,15 @@ function SolicitudCambioDocumento({ onVolver }) {
             variant="contained"
             onClick={handleNext}
             sx={{
-              backgroundColor: "#e0e7ff",
-              color: "#1e3a8a",
-              border: "1px solid #4169E1",
+              backgroundColor: "#E3F2FD",
+              color: "#1976D2",
+              border: "1px solid #1976D2",
               px: 4,
               py: 1,
               borderRadius: 2,
               fontWeight: 600,
               textTransform: "none",
-              "&:hover": { backgroundColor: "#c7d2fe", color: "#1e3a8a" },
+              "&:hover": { backgroundColor: "#BBDEFB", color: "#1976D2" },
             }}
           >
             Siguiente
@@ -719,7 +719,7 @@ function CrearSolicitud() {
             <Typography
               variant="h4"
               sx={{
-                color: "#1e3a8a",
+                color: "#1976D2",
                 fontWeight: 700,
                 mb: 1,
                 textAlign: "center",
@@ -729,7 +729,7 @@ function CrearSolicitud() {
             </Typography>
             <Typography
               variant="body1"
-              sx={{ color: "rgba(30, 58, 138, 0.75)", textAlign: "center", mb: 4 }}
+              sx={{ color: "#757575", textAlign: "center", mb: 4 }}
             >
               Elija el tipo de trámite que desea iniciar.
             </Typography>
@@ -739,13 +739,13 @@ function CrearSolicitud() {
                   sx={{
                     height: "100%",
                     cursor: "pointer",
-                    backgroundColor: "#e8ecff",
-                    border: "1px solid rgba(65, 105, 225, 0.2)",
+                    backgroundColor: "#E3F2FD",
+                    border: "1px solid rgba(25, 118, 210, 0.2)",
                     borderRadius: 3,
                     transition: "all 0.2s ease",
                     "&:hover": {
-                      borderColor: "#4169E1",
-                      boxShadow: "0 8px 32px rgba(65, 105, 225, 0.1)",
+                      borderColor: "#1976D2",
+                      boxShadow: "0 8px 32px rgba(25, 118, 210, 0.1)",
                     },
                   }}
                   onClick={() => setOpcion("cambio")}
@@ -763,20 +763,20 @@ function CrearSolicitud() {
                         sx={{
                           p: 1.5,
                           borderRadius: 2,
-                          bgcolor: "rgba(65, 105, 225, 0.1)",
-                          color: "#1e3a8a",
+                          bgcolor: "rgba(25, 118, 210, 0.1)",
+                          color: "#1976D2",
                         }}
                       >
                         <EditNote sx={{ fontSize: 36 }} />
                       </Box>
                       <Typography
                         variant="h6"
-                        sx={{ color: "#1e3a8a", fontWeight: 600 }}
+                        sx={{ color: "#1976D2", fontWeight: 600 }}
                       >
                         Cambio de documento existente
                       </Typography>
                     </Box>
-                    <Typography variant="body2" sx={{ color: "rgba(30, 58, 138, 0.75)" }}>
+                    <Typography variant="body2" sx={{ color: "#757575" }}>
                       Busque por nomenclatura y registre el cambio como solicitud.
                       Tras la aprobación, los archivos se incorporan al documento
                       existente en el catálogo.
@@ -789,13 +789,13 @@ function CrearSolicitud() {
                   sx={{
                     height: "100%",
                     cursor: "pointer",
-                    backgroundColor: "#e8ecff",
-                    border: "1px solid rgba(65, 105, 225, 0.2)",
+                    backgroundColor: "#E3F2FD",
+                    border: "1px solid rgba(25, 118, 210, 0.2)",
                     borderRadius: 3,
                     transition: "all 0.2s ease",
                     "&:hover": {
-                      borderColor: "#4169E1",
-                      boxShadow: "0 8px 32px rgba(65, 105, 225, 0.1)",
+                      borderColor: "#1976D2",
+                      boxShadow: "0 8px 32px rgba(25, 118, 210, 0.1)",
                     },
                   }}
                   onClick={() => setOpcion("nuevo")}
@@ -821,12 +821,12 @@ function CrearSolicitud() {
                       </Box>
                       <Typography
                         variant="h6"
-                        sx={{ color: "#1e3a8a", fontWeight: 600 }}
+                        sx={{ color: "#1976D2", fontWeight: 600 }}
                       >
                         Solicitud de nuevo documento
                       </Typography>
                     </Box>
-                    <Typography variant="body2" sx={{ color: "rgba(30, 58, 138, 0.75)" }}>
+                    <Typography variant="body2" sx={{ color: "#757575" }}>
                       Información básica, nomenclatura, archivos y aprobadores. Se
                       guarda en la tabla de solicitudes hasta que un administrador
                       apruebe y el documento pase al catálogo oficial.
@@ -843,7 +843,7 @@ function CrearSolicitud() {
             <Button
               startIcon={<ArrowBack />}
               onClick={() => setOpcion(null)}
-              sx={{ color: "#334155", mb: 2, textTransform: "none" }}
+              sx={{ color: "#616161", mb: 2, textTransform: "none" }}
             >
               Volver a opciones
             </Button>

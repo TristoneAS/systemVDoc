@@ -37,10 +37,19 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const forEmpId = String(searchParams.get("for_emp_id") || "").trim();
+    const solicitanteEmpId = String(
+      searchParams.get("solicitante_emp_id") || "",
+    ).trim();
 
-    const [rows] = await conn.query(
-      `SELECT * FROM solicitudes ORDER BY fecha_creacion DESC`,
-    );
+    let sql = `SELECT * FROM solicitudes`;
+    const sqlParams = [];
+    if (solicitanteEmpId) {
+      sql += ` WHERE TRIM(COALESCE(emp_id_solicitante, '')) = ?`;
+      sqlParams.push(solicitanteEmpId);
+    }
+    sql += ` ORDER BY fecha_creacion DESC`;
+
+    const [rows] = await conn.query(sql, sqlParams);
 
     const pendienteIds = rows
       .filter((r) => r.estado === "pendiente")

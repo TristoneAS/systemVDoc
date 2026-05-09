@@ -146,24 +146,24 @@ function VisualizarDocumentos() {
 
   const getFileIcon = (tipoArchivo) => {
     if (tipoArchivo?.includes("pdf")) {
-      return <PictureAsPdf sx={{ color: "#1e3a8a", fontSize: 20 }} />;
+      return <PictureAsPdf sx={{ color: "#1976D2", fontSize: 20 }} />;
     } else if (
       tipoArchivo?.includes("excel") ||
       tipoArchivo?.includes("spreadsheet")
     ) {
-      return <DescriptionOutlined sx={{ color: "#1e3a8a", fontSize: 20 }} />;
+      return <DescriptionOutlined sx={{ color: "#1976D2", fontSize: 20 }} />;
     } else if (
       tipoArchivo?.includes("word") ||
       tipoArchivo?.includes("msword")
     ) {
-      return <Description sx={{ color: "#1e3a8a", fontSize: 20 }} />;
+      return <Description sx={{ color: "#1976D2", fontSize: 20 }} />;
     } else if (
       tipoArchivo?.includes("powerpoint") ||
       tipoArchivo?.includes("presentation")
     ) {
-      return <Slideshow sx={{ color: "#1e3a8a", fontSize: 20 }} />;
+      return <Slideshow sx={{ color: "#1976D2", fontSize: 20 }} />;
     }
-    return <InsertDriveFile sx={{ color: "rgba(30, 58, 138, 0.75)", fontSize: 20 }} />;
+    return <InsertDriveFile sx={{ color: "#757575", fontSize: 20 }} />;
   };
 
   const documentosFiltrados = documentos.filter((doc) => {
@@ -192,7 +192,7 @@ function VisualizarDocumentos() {
         sx={{
           p: 4,
           backgroundColor: "#ffffff",
-          border: "1px solid rgba(65, 105, 225, 0.16)",
+          border: "1px solid rgba(25, 118, 210, 0.16)",
           borderRadius: 3,
           maxWidth: "1400px",
           mx: "auto",
@@ -201,7 +201,7 @@ function VisualizarDocumentos() {
         <Typography
           variant="h4"
           sx={{
-            color: "#1e3a8a",
+            color: "#1976D2",
             fontWeight: 700,
             mb: 3,
           }}
@@ -218,29 +218,29 @@ function VisualizarDocumentos() {
           sx={{
             mb: 3,
             "& .MuiOutlinedInput-root": {
-              backgroundColor: "#f4f6ff",
-              color: "#1e3a8a",
+              backgroundColor: "#E3F2FD",
+              color: "#1976D2",
               "& fieldset": {
-                borderColor: "rgba(65, 105, 225, 0.16)",
+                borderColor: "rgba(25, 118, 210, 0.16)",
               },
               "&:hover fieldset": {
-                borderColor: "#4169E1",
+                borderColor: "#1976D2",
               },
               "&.Mui-focused fieldset": {
-                borderColor: "#4169E1",
+                borderColor: "#1976D2",
               },
             },
             "& .MuiInputLabel-root": {
-              color: "rgba(30, 58, 138, 0.75)",
+              color: "#757575",
             },
             "& .MuiInputBase-input": {
-              color: "#1e3a8a",
+              color: "#1976D2",
             },
           }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <Search sx={{ color: "#1e3a8a" }} />
+                <Search sx={{ color: "#1976D2" }} />
               </InputAdornment>
             ),
           }}
@@ -255,7 +255,7 @@ function VisualizarDocumentos() {
               py: 4,
             }}
           >
-            <CircularProgress sx={{ color: "#1e3a8a" }} />
+            <CircularProgress sx={{ color: "#1976D2" }} />
           </Box>
         )}
 
@@ -264,7 +264,7 @@ function VisualizarDocumentos() {
             severity="error"
             sx={{
               mb: 2,
-              backgroundColor: "rgba(65, 105, 225, 0.09)",
+              backgroundColor: "rgba(25, 118, 210, 0.09)",
               color: "#b91c1c",
               border: "1px solid rgba(239, 68, 68, 0.3)",
               "& .MuiAlert-icon": {
@@ -287,7 +287,7 @@ function VisualizarDocumentos() {
                 alignItems: "center",
               }}
             >
-              <Typography variant="body2" sx={{ color: "rgba(30, 58, 138, 0.75)" }}>
+              <Typography variant="body2" sx={{ color: "#757575" }}>
                 Total de documentos: {documentosFiltrados.length}
               </Typography>
             </Box>
@@ -295,9 +295,9 @@ function VisualizarDocumentos() {
             <TableContainer
               component={Paper}
               sx={{
-                backgroundColor: "#f4f6ff",
+                backgroundColor: "#E3F2FD",
                 borderRadius: 2,
-                border: "1px solid rgba(65, 105, 225, 0.14)",
+                border: "1px solid rgba(25, 118, 210, 0.14)",
                 maxHeight: "70vh",
                 overflow: "auto",
               }}
@@ -307,80 +307,80 @@ function VisualizarDocumentos() {
                   <TableRow>
                     <TableCell
                       sx={{
-                        backgroundColor: "#c7d2fe",
-                        color: "#1e3a8a",
+                        backgroundColor: "#BBDEFB",
+                        color: "#1976D2",
                         fontWeight: 600,
-                        borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
+                        borderBottom: "1px solid rgba(25, 118, 210, 0.14)",
                       }}
                     >
                       ID Documento
                     </TableCell>
                     <TableCell
                       sx={{
-                        backgroundColor: "#c7d2fe",
-                        color: "#1e3a8a",
+                        backgroundColor: "#BBDEFB",
+                        color: "#1976D2",
                         fontWeight: 600,
-                        borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
+                        borderBottom: "1px solid rgba(25, 118, 210, 0.14)",
                       }}
                     >
                       Nombre
                     </TableCell>
                     <TableCell
                       sx={{
-                        backgroundColor: "#c7d2fe",
-                        color: "#1e3a8a",
+                        backgroundColor: "#BBDEFB",
+                        color: "#1976D2",
                         fontWeight: 600,
-                        borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
+                        borderBottom: "1px solid rgba(25, 118, 210, 0.14)",
                       }}
                     >
                       Área
                     </TableCell>
                     <TableCell
                       sx={{
-                        backgroundColor: "#c7d2fe",
-                        color: "#1e3a8a",
+                        backgroundColor: "#BBDEFB",
+                        color: "#1976D2",
                         fontWeight: 600,
-                        borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
+                        borderBottom: "1px solid rgba(25, 118, 210, 0.14)",
                       }}
                     >
                       Nomenclatura
                     </TableCell>
                     <TableCell
                       sx={{
-                        backgroundColor: "#c7d2fe",
-                        color: "#1e3a8a",
+                        backgroundColor: "#BBDEFB",
+                        color: "#1976D2",
                         fontWeight: 600,
-                        borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
+                        borderBottom: "1px solid rgba(25, 118, 210, 0.14)",
                       }}
                     >
                       Estado
                     </TableCell>
                     <TableCell
                       sx={{
-                        backgroundColor: "#c7d2fe",
-                        color: "#1e3a8a",
+                        backgroundColor: "#BBDEFB",
+                        color: "#1976D2",
                         fontWeight: 600,
-                        borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
+                        borderBottom: "1px solid rgba(25, 118, 210, 0.14)",
                       }}
                     >
                       Fecha Alta
                     </TableCell>
                     <TableCell
                       sx={{
-                        backgroundColor: "#c7d2fe",
-                        color: "#1e3a8a",
+                        backgroundColor: "#BBDEFB",
+                        color: "#1976D2",
                         fontWeight: 600,
-                        borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
+                        borderBottom: "1px solid rgba(25, 118, 210, 0.14)",
                       }}
                     >
                       Archivos
                     </TableCell>
                     <TableCell
                       sx={{
-                        backgroundColor: "#c7d2fe",
-                        color: "#1e3a8a",
+                        backgroundColor: "#BBDEFB",
+                        color: "#1976D2",
                         fontWeight: 600,
-                        borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
+                        borderBottom: "1px solid rgba(25, 118, 210, 0.14)",
                       }}
                     >
                       Acciones
@@ -394,7 +394,7 @@ function VisualizarDocumentos() {
                         colSpan={8}
                         sx={{
                           textAlign: "center",
-                          color: "rgba(30, 58, 138, 0.75)",
+                          color: "#757575",
                           py: 4,
                         }}
                       >
@@ -409,17 +409,17 @@ function VisualizarDocumentos() {
                         key={doc.id_documento}
                         sx={{
                           "&:hover": {
-                            backgroundColor: "rgba(65, 105, 225, 0.06)",
+                            backgroundColor: "rgba(25, 118, 210, 0.06)",
                           },
                           borderBottom:
                             index < documentosFiltrados.length - 1
-                              ? "1px solid rgba(65, 105, 225, 0.1)"
+                              ? "1px solid rgba(25, 118, 210, 0.1)"
                               : "none",
                         }}
                       >
                         <TableCell
                           sx={{
-                            color: "#1e3a8a",
+                            color: "#1976D2",
                             borderBottom: "none",
                             fontWeight: 500,
                           }}
@@ -428,7 +428,7 @@ function VisualizarDocumentos() {
                         </TableCell>
                         <TableCell
                           sx={{
-                            color: "#1e3a8a",
+                            color: "#1976D2",
                             borderBottom: "none",
                             fontWeight: 500,
                           }}
@@ -437,7 +437,7 @@ function VisualizarDocumentos() {
                         </TableCell>
                         <TableCell
                           sx={{
-                            color: "#1e3a8a",
+                            color: "#1976D2",
                             borderBottom: "none",
                           }}
                         >
@@ -445,7 +445,7 @@ function VisualizarDocumentos() {
                         </TableCell>
                         <TableCell
                           sx={{
-                            color: "#1e3a8a",
+                            color: "#1976D2",
                             borderBottom: "none",
                           }}
                         >
@@ -453,15 +453,15 @@ function VisualizarDocumentos() {
                             label={doc.nomenclatura}
                             size="small"
                             sx={{
-                              backgroundColor: "rgba(65, 105, 225, 0.14)",
-                              color: "#1e3a8a",
+                              backgroundColor: "rgba(25, 118, 210, 0.14)",
+                              color: "#1976D2",
                               fontWeight: 500,
                             }}
                           />
                         </TableCell>
                         <TableCell
                           sx={{
-                            color: "#1e3a8a",
+                            color: "#1976D2",
                             borderBottom: "none",
                           }}
                         >
@@ -469,15 +469,15 @@ function VisualizarDocumentos() {
                             label={doc.estado ?? "—"}
                             size="small"
                             sx={{
-                              backgroundColor: "rgba(65, 105, 225, 0.14)",
-                              color: "#1e3a8a",
+                              backgroundColor: "rgba(25, 118, 210, 0.14)",
+                              color: "#1976D2",
                               fontWeight: 500,
                             }}
                           />
                         </TableCell>
                         <TableCell
                           sx={{
-                            color: "#1e3a8a",
+                            color: "#1976D2",
                             borderBottom: "none",
                           }}
                         >
@@ -485,7 +485,7 @@ function VisualizarDocumentos() {
                         </TableCell>
                         <TableCell
                           sx={{
-                            color: "#1e3a8a",
+                            color: "#1976D2",
                             borderBottom: "none",
                           }}
                         >
@@ -494,13 +494,13 @@ function VisualizarDocumentos() {
                             size="small"
                             sx={{
                               backgroundColor: "rgba(34, 197, 94, 0.2)",
-                              color: "#1e3a8a",
+                              color: "#1976D2",
                             }}
                           />
                         </TableCell>
                         <TableCell
                           sx={{
-                            color: "#1e3a8a",
+                            color: "#1976D2",
                             borderBottom: "none",
                           }}
                         >
@@ -510,9 +510,9 @@ function VisualizarDocumentos() {
                                 handleVerDetalles(doc.id_documento)
                               }
                               sx={{
-                                color: "#1e3a8a",
+                                color: "#1976D2",
                                 "&:hover": {
-                                  backgroundColor: "rgba(65, 105, 225, 0.09)",
+                                  backgroundColor: "rgba(25, 118, 210, 0.09)",
                                 },
                               }}
                             >
@@ -538,73 +538,73 @@ function VisualizarDocumentos() {
           PaperProps={{
             sx: {
               backgroundColor: "#ffffff",
-              border: "1px solid rgba(65, 105, 225, 0.16)",
+              border: "1px solid rgba(25, 118, 210, 0.16)",
             },
           }}
         >
-          <DialogTitle sx={{ color: "#1e3a8a", fontWeight: 700 }}>
+          <DialogTitle sx={{ color: "#1976D2", fontWeight: 700 }}>
             Detalles del Documento
           </DialogTitle>
           <DialogContent>
             {selectedDocumento && (
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 <Grid item xs={12} md={6}>
-                  <Typography variant="caption" sx={{ color: "rgba(30, 58, 138, 0.75)" }}>
+                  <Typography variant="caption" sx={{ color: "#757575" }}>
                     ID Documento
                   </Typography>
-                  <Typography variant="body1" sx={{ color: "#1e3a8a", mb: 2 }}>
+                  <Typography variant="body1" sx={{ color: "#1976D2", mb: 2 }}>
                     {selectedDocumento.id_documento}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <Typography variant="caption" sx={{ color: "rgba(30, 58, 138, 0.75)" }}>
+                  <Typography variant="caption" sx={{ color: "#757575" }}>
                     Fecha de Alta
                   </Typography>
-                  <Typography variant="body1" sx={{ color: "#1e3a8a", mb: 2 }}>
+                  <Typography variant="body1" sx={{ color: "#1976D2", mb: 2 }}>
                     {new Date(selectedDocumento.fecha_alta).toLocaleDateString(
                       "es-ES",
                     )}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <Typography variant="caption" sx={{ color: "rgba(30, 58, 138, 0.75)" }}>
+                  <Typography variant="caption" sx={{ color: "#757575" }}>
                     Área
                   </Typography>
-                  <Typography variant="body1" sx={{ color: "#1e3a8a", mb: 2 }}>
+                  <Typography variant="body1" sx={{ color: "#1976D2", mb: 2 }}>
                     {selectedDocumento.area_nombre ?? "—"}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <Typography variant="caption" sx={{ color: "rgba(30, 58, 138, 0.75)" }}>
+                  <Typography variant="caption" sx={{ color: "#757575" }}>
                     Nomenclatura
                   </Typography>
-                  <Typography variant="body1" sx={{ color: "#1e3a8a", mb: 2 }}>
+                  <Typography variant="body1" sx={{ color: "#1976D2", mb: 2 }}>
                     {selectedDocumento.nomenclatura}
                   </Typography>
                 </Grid>
                 <Grid item xs={12}>
-                  <Typography variant="caption" sx={{ color: "rgba(30, 58, 138, 0.75)" }}>
+                  <Typography variant="caption" sx={{ color: "#757575" }}>
                     Nombre del Documento
                   </Typography>
-                  <Typography variant="body1" sx={{ color: "#1e3a8a", mb: 2 }}>
+                  <Typography variant="body1" sx={{ color: "#1976D2", mb: 2 }}>
                     {selectedDocumento.nombre_documento}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <Typography variant="caption" sx={{ color: "rgba(30, 58, 138, 0.75)" }}>
+                  <Typography variant="caption" sx={{ color: "#757575" }}>
                     Estado
                   </Typography>
-                  <Typography variant="body1" sx={{ color: "#1e3a8a", mb: 2 }}>
+                  <Typography variant="body1" sx={{ color: "#1976D2", mb: 2 }}>
                     {selectedDocumento.estado ?? "—"}
                   </Typography>
                 </Grid>
                 <Grid item xs={12}>
                   <Divider
-                    sx={{ my: 2, borderColor: "rgba(65, 105, 225, 0.14)" }}
+                    sx={{ my: 2, borderColor: "rgba(25, 118, 210, 0.14)" }}
                   />
                   <Typography
                     variant="subtitle1"
-                    sx={{ color: "#1e3a8a", fontWeight: 600, mb: 2 }}
+                    sx={{ color: "#1976D2", fontWeight: 600, mb: 2 }}
                   >
                     Archivos ({selectedDocumento.archivos?.length || 0})
                   </Typography>
@@ -615,8 +615,8 @@ function VisualizarDocumentos() {
                         <Grid item xs={12} key={index}>
                           <Card
                             sx={{
-                              backgroundColor: "#f4f6ff",
-                              border: "1px solid rgba(65, 105, 225, 0.14)",
+                              backgroundColor: "#E3F2FD",
+                              border: "1px solid rgba(25, 118, 210, 0.14)",
                             }}
                           >
                             <CardContent>
@@ -638,13 +638,13 @@ function VisualizarDocumentos() {
                                   <Box>
                                     <Typography
                                       variant="body2"
-                                      sx={{ color: "#1e3a8a", fontWeight: 500 }}
+                                      sx={{ color: "#1976D2", fontWeight: 500 }}
                                     >
                                       {archivo.nombre_archivo}
                                     </Typography>
                                     <Typography
                                       variant="caption"
-                                      sx={{ color: "rgba(30, 58, 138, 0.75)" }}
+                                      sx={{ color: "#757575" }}
                                     >
                                       {(archivo.tamano_archivo / 1024).toFixed(
                                         2,
@@ -660,10 +660,10 @@ function VisualizarDocumentos() {
                                         handleVisualizarArchivo(archivo)
                                       }
                                       sx={{
-                                        color: "#1e3a8a",
+                                        color: "#1976D2",
                                         "&:hover": {
                                           backgroundColor:
-                                            "rgba(65, 105, 225, 0.09)",
+                                            "rgba(25, 118, 210, 0.09)",
                                         },
                                       }}
                                     >
@@ -679,10 +679,10 @@ function VisualizarDocumentos() {
                                         )
                                       }
                                       sx={{
-                                        color: "#1e3a8a",
+                                        color: "#1976D2",
                                         "&:hover": {
                                           backgroundColor:
-                                            "rgba(65, 105, 225, 0.09)",
+                                            "rgba(25, 118, 210, 0.09)",
                                         },
                                       }}
                                     >
@@ -697,7 +697,7 @@ function VisualizarDocumentos() {
                       ))}
                     </Grid>
                   ) : (
-                    <Typography variant="body2" sx={{ color: "rgba(30, 58, 138, 0.75)" }}>
+                    <Typography variant="body2" sx={{ color: "#757575" }}>
                       No hay archivos asociados
                     </Typography>
                   )}
@@ -709,9 +709,9 @@ function VisualizarDocumentos() {
             <Button
               onClick={() => setOpenDialog(false)}
               sx={{
-                color: "#1e3a8a",
+                color: "#1976D2",
                 "&:hover": {
-                  backgroundColor: "rgba(65, 105, 225, 0.09)",
+                  backgroundColor: "rgba(25, 118, 210, 0.09)",
                 },
               }}
             >
@@ -729,7 +729,7 @@ function VisualizarDocumentos() {
           PaperProps={{
             sx: {
               backgroundColor: "#ffffff",
-              border: "1px solid rgba(65, 105, 225, 0.16)",
+              border: "1px solid rgba(25, 118, 210, 0.16)",
               height: "90vh",
               display: "flex",
               flexDirection: "column",
@@ -738,26 +738,26 @@ function VisualizarDocumentos() {
         >
           <DialogTitle
             sx={{
-              color: "#1e3a8a",
+              color: "#1976D2",
               fontWeight: 700,
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
+              borderBottom: "1px solid rgba(25, 118, 210, 0.14)",
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
               {archivoVisualizar && getFileIcon(archivoVisualizar.tipo_archivo)}
-              <Typography variant="h6" sx={{ color: "#1e3a8a" }}>
+              <Typography variant="h6" sx={{ color: "#1976D2" }}>
                 {archivoVisualizar?.nombre_archivo}
               </Typography>
             </Box>
             <IconButton
               onClick={() => setArchivoVisualizar(null)}
               sx={{
-                color: "#1e3a8a",
+                color: "#1976D2",
                 "&:hover": {
-                  backgroundColor: "rgba(65, 105, 225, 0.09)",
+                  backgroundColor: "rgba(25, 118, 210, 0.09)",
                 },
               }}
             >
@@ -811,18 +811,18 @@ function VisualizarDocumentos() {
                       alignItems: "center",
                       justifyContent: "center",
                       p: 4,
-                      color: "#1e3a8a",
+                      color: "#1976D2",
                     }}
                   >
                     <DescriptionOutlined
-                      sx={{ fontSize: 64, color: "#1e3a8a", mb: 2 }}
+                      sx={{ fontSize: 64, color: "#1976D2", mb: 2 }}
                     />
                     <Typography variant="h6" sx={{ mb: 2 }}>
                       Visualización de Excel
                     </Typography>
                     <Typography
                       variant="body2"
-                      sx={{ color: "rgba(30, 58, 138, 0.75)", mb: 3 }}
+                      sx={{ color: "#757575", mb: 3 }}
                     >
                       Para visualizar archivos Excel, descárgalo y ábrelo con
                       Microsoft Excel o Google Sheets.
@@ -837,12 +837,12 @@ function VisualizarDocumentos() {
                         )
                       }
                       sx={{
-                        backgroundColor: "#e0e7ff",
-                        color: "#1e3a8a",
-                        border: "1px solid #4169E1",
+                        backgroundColor: "#E3F2FD",
+                        color: "#1976D2",
+                        border: "1px solid #1976D2",
                         "&:hover": {
-                          backgroundColor: "#c7d2fe",
-                          color: "#1e3a8a",
+                          backgroundColor: "#BBDEFB",
+                          color: "#1976D2",
                         },
                       }}
                     >
@@ -858,18 +858,18 @@ function VisualizarDocumentos() {
                       alignItems: "center",
                       justifyContent: "center",
                       p: 4,
-                      color: "#1e3a8a",
+                      color: "#1976D2",
                     }}
                   >
                     <Description
-                      sx={{ fontSize: 64, color: "#1e3a8a", mb: 2 }}
+                      sx={{ fontSize: 64, color: "#1976D2", mb: 2 }}
                     />
                     <Typography variant="h6" sx={{ mb: 2 }}>
                       Visualización de Word
                     </Typography>
                     <Typography
                       variant="body2"
-                      sx={{ color: "rgba(30, 58, 138, 0.75)", mb: 3 }}
+                      sx={{ color: "#757575", mb: 3 }}
                     >
                       Para visualizar archivos Word, descárgalo y ábrelo con
                       Microsoft Word o Google Docs.
@@ -884,12 +884,12 @@ function VisualizarDocumentos() {
                         )
                       }
                       sx={{
-                        backgroundColor: "#e0e7ff",
-                        color: "#1e3a8a",
-                        border: "1px solid #4169E1",
+                        backgroundColor: "#E3F2FD",
+                        color: "#1976D2",
+                        border: "1px solid #1976D2",
                         "&:hover": {
-                          backgroundColor: "#c7d2fe",
-                          color: "#1e3a8a",
+                          backgroundColor: "#BBDEFB",
+                          color: "#1976D2",
                         },
                       }}
                     >
@@ -905,16 +905,16 @@ function VisualizarDocumentos() {
                       alignItems: "center",
                       justifyContent: "center",
                       p: 4,
-                      color: "#1e3a8a",
+                      color: "#1976D2",
                     }}
                   >
-                    <Slideshow sx={{ fontSize: 64, color: "#1e3a8a", mb: 2 }} />
+                    <Slideshow sx={{ fontSize: 64, color: "#1976D2", mb: 2 }} />
                     <Typography variant="h6" sx={{ mb: 2 }}>
                       Visualización de PowerPoint
                     </Typography>
                     <Typography
                       variant="body2"
-                      sx={{ color: "rgba(30, 58, 138, 0.75)", mb: 3 }}
+                      sx={{ color: "#757575", mb: 3 }}
                     >
                       Para visualizar archivos PowerPoint, descárgalo y ábrelo
                       con Microsoft PowerPoint o Google Slides.
@@ -929,12 +929,12 @@ function VisualizarDocumentos() {
                         )
                       }
                       sx={{
-                        backgroundColor: "#e0e7ff",
-                        color: "#1e3a8a",
-                        border: "1px solid #4169E1",
+                        backgroundColor: "#E3F2FD",
+                        color: "#1976D2",
+                        border: "1px solid #1976D2",
                         "&:hover": {
-                          backgroundColor: "#c7d2fe",
-                          color: "#1e3a8a",
+                          backgroundColor: "#BBDEFB",
+                          color: "#1976D2",
                         },
                       }}
                     >
@@ -950,11 +950,11 @@ function VisualizarDocumentos() {
                       alignItems: "center",
                       justifyContent: "center",
                       p: 4,
-                      color: "#1e3a8a",
+                      color: "#1976D2",
                     }}
                   >
                     <InsertDriveFile
-                      sx={{ fontSize: 64, color: "rgba(30, 58, 138, 0.75)", mb: 2 }}
+                      sx={{ fontSize: 64, color: "#757575", mb: 2 }}
                     />
                     <Typography variant="h6" sx={{ mb: 2 }}>
                       Tipo de archivo no soportado para visualización
@@ -969,12 +969,12 @@ function VisualizarDocumentos() {
                         )
                       }
                       sx={{
-                        backgroundColor: "#e0e7ff",
-                        color: "#1e3a8a",
-                        border: "1px solid #4169E1",
+                        backgroundColor: "#E3F2FD",
+                        color: "#1976D2",
+                        border: "1px solid #1976D2",
                         "&:hover": {
-                          backgroundColor: "#c7d2fe",
-                          color: "#1e3a8a",
+                          backgroundColor: "#BBDEFB",
+                          color: "#1976D2",
                         },
                       }}
                     >
@@ -988,7 +988,7 @@ function VisualizarDocumentos() {
           <DialogActions
             sx={{
               p: 2,
-              borderTop: "1px solid rgba(65, 105, 225, 0.14)",
+              borderTop: "1px solid rgba(25, 118, 210, 0.14)",
             }}
           >
             {archivoVisualizar && (
@@ -1001,9 +1001,9 @@ function VisualizarDocumentos() {
                   )
                 }
                 sx={{
-                  color: "#1e3a8a",
+                  color: "#1976D2",
                   "&:hover": {
-                    backgroundColor: "rgba(65, 105, 225, 0.09)",
+                    backgroundColor: "rgba(25, 118, 210, 0.09)",
                   },
                 }}
               >
@@ -1013,9 +1013,9 @@ function VisualizarDocumentos() {
             <Button
               onClick={() => setArchivoVisualizar(null)}
               sx={{
-                color: "#1e3a8a",
+                color: "#1976D2",
                 "&:hover": {
-                  backgroundColor: "rgba(65, 105, 225, 0.09)",
+                  backgroundColor: "rgba(25, 118, 210, 0.09)",
                 },
               }}
             >

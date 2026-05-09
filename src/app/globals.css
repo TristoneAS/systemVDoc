@@ -1,11 +1,17 @@
 :root {
-  --background: #ffffff;
-  --foreground: #1e3a8a;
-  --accent-soft: #e8ecff;
-  --accent-mid: #7999ff;
-  --accent-strong: #4169E1;
-  --border-subtle: rgba(65, 105, 225, 0.2);
-  --text-muted: #64748b;
+  --background: #f8f9fa;
+  --foreground: #212121;
+  --primary: #1976d2;
+  --primary-dark: #1565c0;
+  --accent-soft: #e3f2fd;
+  --accent-mid: #42a5f5;
+  --accent-strong: #1976d2;
+  --accent-orange-start: #f57c00;
+  --accent-orange-end: #ff9800;
+  --border-subtle: rgba(25, 118, 210, 0.2);
+  --text-muted: #757575;
+  --surface-card: #ffffff;
+  --divider: rgba(0, 0, 0, 0.08);
 }
 
 html,
@@ -17,7 +23,7 @@ body {
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-roboto), "Roboto", "Helvetica", "Arial", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

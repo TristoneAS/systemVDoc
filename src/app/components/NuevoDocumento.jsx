@@ -201,19 +201,19 @@ function NuevoDocumento({
 
   const getFileIcon = (file) => {
     if (file.type.includes("pdf")) {
-      return <PictureAsPdf sx={{ color: "#1e3a8a" }} />;
+      return <PictureAsPdf sx={{ color: "#1976D2" }} />;
     } else if (
       file.type.includes("excel") ||
       file.type.includes("spreadsheet")
     ) {
-      return <DescriptionOutlined sx={{ color: "#1e3a8a" }} />;
+      return <DescriptionOutlined sx={{ color: "#1976D2" }} />;
     } else if (file.type.includes("word") || file.type.includes("msword")) {
-      return <Description sx={{ color: "#1e3a8a" }} />;
+      return <Description sx={{ color: "#1976D2" }} />;
     } else if (
       file.type.includes("powerpoint") ||
       file.type.includes("presentation")
     ) {
-      return <Slideshow sx={{ color: "#1e3a8a" }} />;
+      return <Slideshow sx={{ color: "#1976D2" }} />;
     }
     return <InsertDriveFile />;
   };
@@ -330,24 +330,24 @@ function NuevoDocumento({
                 disabled
                 sx={{
                   "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#f4f6ff",
-                    color: "#1e3a8a",
+                    backgroundColor: "#FFFFFF",
+                    color: "#212121",
                     "& fieldset": {
-                      borderColor: "rgba(65, 105, 225, 0.16)",
+                      borderColor: "rgba(25, 118, 210, 0.16)",
                     },
                     "& .MuiInputBase-input": {
-                      color: "#1e3a8a !important",
+                      color: "#212121 !important",
                     },
                     "& .MuiInputBase-input.Mui-disabled": {
-                      WebkitTextFillColor: "#1e3a8a !important",
-                      color: "#1e3a8a !important",
+                      WebkitTextFillColor: "#212121 !important",
+                      color: "#212121 !important",
                     },
                   },
                   "& .MuiInputLabel-root": {
-                    color: "rgba(30, 58, 138, 0.75)",
+                    color: "#757575",
                   },
                   "& .MuiFormHelperText-root": {
-                    color: "rgba(30, 58, 138, 0.75)",
+                    color: "#757575",
                   },
                 }}
                 helperText="Consecutivo sugerido; el definitivo se asigna al guardar"
@@ -365,21 +365,21 @@ function NuevoDocumento({
                 }}
                 sx={{
                   "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#f4f6ff",
-                    color: "#1e3a8a",
+                    backgroundColor: "#FFFFFF",
+                    color: "#212121",
                     "& fieldset": {
-                      borderColor: "rgba(65, 105, 225, 0.16)",
+                      borderColor: "rgba(25, 118, 210, 0.16)",
                     },
                     "& .MuiInputBase-input": {
-                      color: "#1e3a8a !important",
+                      color: "#212121 !important",
                     },
                     "& .MuiInputBase-input.Mui-disabled": {
-                      WebkitTextFillColor: "#1e3a8a !important",
-                      color: "#1e3a8a !important",
+                      WebkitTextFillColor: "#212121 !important",
+                      color: "#212121 !important",
                     },
                   },
                   "& .MuiInputLabel-root": {
-                    color: "rgba(30, 58, 138, 0.75)",
+                    color: "#757575",
                   },
                 }}
               />
@@ -397,31 +397,31 @@ function NuevoDocumento({
                 required
                 sx={{
                   "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#f4f6ff",
-                    color: "#1e3a8a",
+                    backgroundColor: "#FFFFFF",
+                    color: "#212121",
                     "& fieldset": {
-                      borderColor: "rgba(65, 105, 225, 0.16)",
+                      borderColor: "rgba(25, 118, 210, 0.16)",
                     },
                     "&:hover fieldset": {
-                      borderColor: "#4169E1",
+                      borderColor: "#1976D2",
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: "#4169E1",
+                      borderColor: "#1976D2",
                     },
                     "& .MuiInputBase-input": {
-                      color: "#1e3a8a",
+                      color: "#212121",
                     },
                   },
                   "& .MuiInputLabel-root": {
-                    color: "rgba(30, 58, 138, 0.75)",
+                    color: "#757575",
                     "&.Mui-focused": {
-                      color: "#1e3a8a",
+                      color: "#1976D2",
                     },
                   },
                   "& .MuiFormHelperText-root": {
                     color: errors.nomenclatura
                       ? "#b91c1c"
-                      : "rgba(30, 58, 138, 0.75)",
+                      : "#757575",
                   },
                 }}
               />
@@ -439,31 +439,31 @@ function NuevoDocumento({
                 required
                 sx={{
                   "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#f4f6ff",
-                    color: "#1e3a8a",
+                    backgroundColor: "#FFFFFF",
+                    color: "#212121",
                     "& fieldset": {
-                      borderColor: "rgba(65, 105, 225, 0.16)",
+                      borderColor: "rgba(25, 118, 210, 0.16)",
                     },
                     "&:hover fieldset": {
-                      borderColor: "#4169E1",
+                      borderColor: "#1976D2",
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: "#4169E1",
+                      borderColor: "#1976D2",
                     },
                     "& .MuiInputBase-input": {
-                      color: "#1e3a8a",
+                      color: "#212121",
                     },
                   },
                   "& .MuiInputLabel-root": {
-                    color: "rgba(30, 58, 138, 0.75)",
+                    color: "#757575",
                     "&.Mui-focused": {
-                      color: "#1e3a8a",
+                      color: "#1976D2",
                     },
                   },
                   "& .MuiFormHelperText-root": {
                     color: errors.confirmar_nomenclatura
                       ? "#b91c1c"
-                      : "rgba(30, 58, 138, 0.75)",
+                      : "#757575",
                   },
                 }}
               />
@@ -476,22 +476,22 @@ function NuevoDocumento({
                 disabled={areasLoading}
                 sx={{
                   "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#f4f6ff",
-                    color: "#1e3a8a",
+                    backgroundColor: "#FFFFFF",
+                    color: "#212121",
                     "& fieldset": {
-                      borderColor: "rgba(65, 105, 225, 0.16)",
+                      borderColor: "rgba(25, 118, 210, 0.16)",
                     },
                     "&:hover fieldset": {
-                      borderColor: "#4169E1",
+                      borderColor: "#1976D2",
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: "#4169E1",
+                      borderColor: "#1976D2",
                     },
-                    "& .MuiSelect-icon": { color: "rgba(30, 58, 138, 0.75)" },
+                    "& .MuiSelect-icon": { color: "#757575" },
                   },
                   "& .MuiInputLabel-root": {
-                    color: "rgba(30, 58, 138, 0.75)",
-                    "&.Mui-focused": { color: "#1e3a8a" },
+                    color: "#757575",
+                    "&.Mui-focused": { color: "#1976D2" },
                   },
                 }}
               >
@@ -518,11 +518,11 @@ function NuevoDocumento({
                     {errors.id_area}
                   </FormHelperText>
                 ) : areasLoading ? (
-                  <FormHelperText sx={{ color: "rgba(30, 58, 138, 0.75)" }}>
+                  <FormHelperText sx={{ color: "#757575" }}>
                     Cargando áreas…
                   </FormHelperText>
                 ) : (
-                  <FormHelperText sx={{ color: "rgba(30, 58, 138, 0.75)" }}>
+                  <FormHelperText sx={{ color: "#757575" }}>
                     Solo se guarda el identificador del área; el responsable se
                     actualiza en configuración sin afectar documentos existentes
                   </FormHelperText>
@@ -542,31 +542,31 @@ function NuevoDocumento({
                 required
                 sx={{
                   "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#f4f6ff",
-                    color: "#1e3a8a",
+                    backgroundColor: "#FFFFFF",
+                    color: "#212121",
                     "& fieldset": {
-                      borderColor: "rgba(65, 105, 225, 0.16)",
+                      borderColor: "rgba(25, 118, 210, 0.16)",
                     },
                     "&:hover fieldset": {
-                      borderColor: "#4169E1",
+                      borderColor: "#1976D2",
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: "#4169E1",
+                      borderColor: "#1976D2",
                     },
                     "& .MuiInputBase-input": {
-                      color: "#1e3a8a",
+                      color: "#212121",
                     },
                   },
                   "& .MuiInputLabel-root": {
-                    color: "rgba(30, 58, 138, 0.75)",
+                    color: "#757575",
                     "&.Mui-focused": {
-                      color: "#1e3a8a",
+                      color: "#1976D2",
                     },
                   },
                   "& .MuiFormHelperText-root": {
                     color: errors.nombre_documento
                       ? "#b91c1c"
-                      : "rgba(30, 58, 138, 0.75)",
+                      : "#757575",
                   },
                 }}
               />
@@ -585,13 +585,13 @@ function NuevoDocumento({
                 alignItems: "center",
                 justifyContent: "center",
                 p: 4,
-                border: "2px dashed rgba(65, 105, 225, 0.16)",
+                border: "2px dashed rgba(25, 118, 210, 0.16)",
                 borderRadius: 3,
-                backgroundColor: "rgba(65, 105, 225, 0.08)",
+                backgroundColor: "rgba(25, 118, 210, 0.08)",
                 transition: "all 0.3s ease",
                 "&:hover": {
-                  borderColor: "#4169E1",
-                  backgroundColor: "#f4f6ff",
+                  borderColor: "#1976D2",
+                  backgroundColor: "#E3F2FD",
                 },
               }}
             >
@@ -609,17 +609,17 @@ function NuevoDocumento({
                   component="span"
                   startIcon={<CloudUpload />}
                   sx={{
-                    backgroundColor: "#e0e7ff",
-                    color: "#1e3a8a",
-                    border: "1px solid #4169E1",
+                    backgroundColor: "#FFFFFF",
+                    color: "#212121",
+                    border: "1px solid #1976D2",
                     py: 1.5,
                     px: 3,
                     borderRadius: 2,
                     fontWeight: 600,
                     textTransform: "none",
                     "&:hover": {
-                      backgroundColor: "#c7d2fe",
-                      color: "#1e3a8a",
+                      backgroundColor: "#BBDEFB",
+                      color: "#1976D2",
                     },
                   }}
                 >
@@ -628,7 +628,7 @@ function NuevoDocumento({
               </label>
               <Typography
                 variant="caption"
-                sx={{ color: "rgba(30, 58, 138, 0.75)", mt: 2 }}
+                sx={{ color: "#757575", mt: 2 }}
               >
                 Formatos permitidos: .xlsx, .xls, .pdf, .doc, .docx, .ppt, .pptx
               </Typography>
@@ -636,7 +636,7 @@ function NuevoDocumento({
 
             {formData.archivos.length > 0 && (
               <Box sx={{ mt: 3 }}>
-                <Typography variant="h6" sx={{ color: "#1e3a8a", mb: 2 }}>
+                <Typography variant="h6" sx={{ color: "#1976D2", mb: 2 }}>
                   Archivos Cargados ({formData.archivos.length})
                 </Typography>
                 <Grid container spacing={2}>
@@ -644,8 +644,8 @@ function NuevoDocumento({
                     <Grid item xs={12} sm={6} md={4} key={index}>
                       <Card
                         sx={{
-                          backgroundColor: "#f4f6ff",
-                          border: "1px solid rgba(65, 105, 225, 0.16)",
+                          backgroundColor: "#E3F2FD",
+                          border: "1px solid rgba(25, 118, 210, 0.16)",
                         }}
                       >
                         <CardContent>
@@ -668,7 +668,7 @@ function NuevoDocumento({
                                 <Typography
                                   variant="body2"
                                   sx={{
-                                    color: "#1e3a8a",
+                                    color: "#1976D2",
                                     fontWeight: 500,
                                     overflow: "hidden",
                                     textOverflow: "ellipsis",
@@ -680,7 +680,7 @@ function NuevoDocumento({
                                 </Typography>
                                 <Typography
                                   variant="caption"
-                                  sx={{ color: "rgba(30, 58, 138, 0.75)" }}
+                                  sx={{ color: "#757575" }}
                                 >
                                   {(file.size / 1024).toFixed(2)} KB
                                 </Typography>
@@ -689,9 +689,9 @@ function NuevoDocumento({
                             <IconButton
                               onClick={() => handleRemoveFile(index)}
                               sx={{
-                                color: "#1e3a8a",
+                                color: "#1976D2",
                                 "&:hover": {
-                                  backgroundColor: "rgba(65, 105, 225, 0.09)",
+                                  backgroundColor: "rgba(25, 118, 210, 0.09)",
                                 },
                               }}
                             >
@@ -719,7 +719,7 @@ function NuevoDocumento({
       sx={{
         p: 4,
         backgroundColor: "#ffffff",
-        border: "1px solid rgba(65, 105, 225, 0.16)",
+        border: "1px solid rgba(25, 118, 210, 0.16)",
         borderRadius: 3,
         maxWidth: "900px",
         mx: "auto",
@@ -728,7 +728,7 @@ function NuevoDocumento({
       <Typography
         variant="h4"
         sx={{
-          color: "#1e3a8a",
+          color: "#1976D2",
           fontWeight: 700,
           mb: 1,
           textAlign: "center",
@@ -740,7 +740,7 @@ function NuevoDocumento({
         <Typography
           variant="body2"
           sx={{
-            color: "rgba(30, 58, 138, 0.75)",
+            color: "#757575",
             textAlign: "center",
             mb: 4,
           }}
@@ -751,7 +751,7 @@ function NuevoDocumento({
         <Typography
           variant="body2"
           sx={{
-            color: "rgba(30, 58, 138, 0.75)",
+            color: "#757575",
             textAlign: "center",
             mb: 4,
           }}
@@ -766,16 +766,16 @@ function NuevoDocumento({
         sx={{
           mb: 4,
           "& .MuiStepLabel-root .Mui-completed": {
-            color: "#1e3a8a",
+            color: "#1976D2",
           },
           "& .MuiStepLabel-label.Mui-completed": {
-            color: "#475569",
+            color: "#757575",
           },
           "& .MuiStepLabel-root .Mui-active": {
-            color: "#1e3a8a",
+            color: "#1976D2",
           },
           "& .MuiStepLabel-label.Mui-active": {
-            color: "#1e3a8a",
+            color: "#1976D2",
           },
           "& .MuiStepLabel-root .Mui-disabled": {
             color: "rgba(255,255,255,0.5)",
@@ -783,10 +783,10 @@ function NuevoDocumento({
           "& .MuiStepIcon-root": {
             color: "rgba(255,255,255,0.5)",
             "&.Mui-active": {
-              color: "#1e3a8a",
+              color: "#1976D2",
             },
             "&.Mui-completed": {
-              color: "#1e3a8a",
+              color: "#1976D2",
             },
           },
         }}
@@ -807,7 +807,7 @@ function NuevoDocumento({
           severity="error"
           sx={{
             mb: 2,
-            backgroundColor: "rgba(65, 105, 225, 0.09)",
+            backgroundColor: "rgba(25, 118, 210, 0.09)",
             color: "#b91c1c",
             border: "1px solid rgba(239, 68, 68, 0.3)",
             "& .MuiAlert-icon": {
@@ -826,10 +826,10 @@ function NuevoDocumento({
           sx={{
             mb: 2,
             backgroundColor: "rgba(34, 197, 94, 0.1)",
-            color: "#1e3a8a",
-            border: "1px solid rgba(65, 105, 225, 0.22)",
+            color: "#1976D2",
+            border: "1px solid rgba(25, 118, 210, 0.22)",
             "& .MuiAlert-icon": {
-              color: "#1e3a8a",
+              color: "#1976D2",
             },
           }}
         >
@@ -842,9 +842,9 @@ function NuevoDocumento({
           disabled={activeStep === 0 || loading}
           onClick={handleBack}
           sx={{
-            color: "#1e3a8a",
+            color: "#1976D2",
             "&:disabled": {
-              color: "rgba(30, 58, 138, 0.35)",
+              color: "rgba(117, 117, 117, 0.55)",
             },
           }}
         >
@@ -856,28 +856,28 @@ function NuevoDocumento({
             onClick={handleSubmit}
             disabled={loading}
             sx={{
-              backgroundColor: loading ? "#cbd5e1" : "#e0e7ff",
-              color: "#1e3a8a",
-              border: loading ? "1px solid #94a3b8" : "1px solid #4169E1",
+              backgroundColor: loading ? "#E0E0E0" : "#E3F2FD",
+              color: "#1976D2",
+              border: loading ? "1px solid #9E9E9E" : "1px solid #1976D2",
               px: 4,
               py: 1,
               borderRadius: 2,
               fontWeight: 600,
               textTransform: "none",
               "&:hover": {
-                backgroundColor: loading ? "#cbd5e1" : "#c7d2fe",
-                color: "#1e3a8a",
+                backgroundColor: loading ? "#E0E0E0" : "#BBDEFB",
+                color: "#1976D2",
               },
               "&:disabled": {
                 backgroundColor: "#e2e8f0",
-                color: "#64748b",
-                borderColor: "#cbd5e1",
+                color: "#757575",
+                borderColor: "#E0E0E0",
               },
             }}
           >
             {loading ? (
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <CircularProgress size={20} sx={{ color: "#1e3a8a" }} />
+                <CircularProgress size={20} sx={{ color: "#1976D2" }} />
                 {savingLabel}
               </Box>
             ) : (
@@ -889,17 +889,17 @@ function NuevoDocumento({
             variant="contained"
             onClick={handleNext}
             sx={{
-              backgroundColor: "#e0e7ff",
-              color: "#1e3a8a",
-              border: "1px solid #4169E1",
+              backgroundColor: "#FFFFFF",
+                    color: "#212121",
+              border: "1px solid #1976D2",
               px: 4,
               py: 1,
               borderRadius: 2,
               fontWeight: 600,
               textTransform: "none",
               "&:hover": {
-                backgroundColor: "#c7d2fe",
-                color: "#1e3a8a",
+                backgroundColor: "#BBDEFB",
+                color: "#1976D2",
               },
             }}
           >

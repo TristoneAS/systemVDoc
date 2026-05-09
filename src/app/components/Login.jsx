@@ -159,7 +159,7 @@ function Login() {
         alignItems: "center",
         justifyContent: "center",
         background:
-          "radial-gradient(circle at top left, #ffffff 0%, #f4f6ff 38%, #e8ecff 72%, #ffffff 100%)",
+          "radial-gradient(circle at top left, #ffffff 0%, #F8F9FA 40%, #E3F2FD 70%, #ffffff 100%)",
         p: 2,
         position: "relative",
         overflow: "hidden",
@@ -169,7 +169,7 @@ function Login() {
           width: "600px",
           height: "600px",
           borderRadius: "50%",
-          background: "rgba(186, 230, 253, 0.85)",
+          background: "rgba(25, 118, 210, 0.08)",
           top: "-200px",
           left: "-200px",
         },
@@ -179,7 +179,7 @@ function Login() {
           width: "500px",
           height: "500px",
           borderRadius: "50%",
-          background: "rgba(224, 242, 254, 0.65)",
+          background: "rgba(245, 124, 0, 0.06)",
           bottom: "-150px",
           right: "-150px",
         },
@@ -204,7 +204,7 @@ function Login() {
             bottom: "10%",
             width: "2px",
             background:
-              "linear-gradient(to bottom, rgba(65,105,225,0.45), rgba(232,236,255,0.95))",
+              "linear-gradient(to bottom, rgba(25, 118, 210, 0.35), rgba(227, 242, 253, 0.95))",
           }}
         />
 
@@ -220,24 +220,24 @@ function Login() {
             borderRadius: 2,
             minWidth: 180,
             backgroundColor: "#ffffff",
-            border: "1px solid rgba(65, 105, 225, 0.35)",
+            border: "1px solid rgba(25, 118, 210, 0.35)",
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Description sx={{ color: "#1e3a8a" }} />
+            <Description sx={{ color: "#1976D2" }} />
             <Box>
-              <Typography variant="caption" sx={{ color: "#1e3a8a" }}>
+              <Typography variant="caption" sx={{ color: "#1976D2" }}>
                 Documento
               </Typography>
               <Typography
                 variant="body2"
-                sx={{ fontWeight: 600, color: "#1e3a8a" }}
+                sx={{ fontWeight: 600, color: "#1976D2" }}
               >
                 Instructivo Calidad_v1.pdf
               </Typography>
             </Box>
           </Box>
-          <Typography variant="caption" sx={{ color: "#475569", mt: 0.5 }}>
+          <Typography variant="caption" sx={{ color: "#757575", mt: 0.5 }}>
             Creado · 09:12
           </Typography>
         </Paper>
@@ -254,24 +254,24 @@ function Login() {
             borderRadius: 2,
             minWidth: 190,
             backgroundColor: "#ffffff",
-            border: "1px dashed rgba(65, 105, 225, 0.38)",
+            border: "1px dashed rgba(25, 118, 210, 0.38)",
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <History sx={{ color: "#1e3a8a" }} />
+            <History sx={{ color: "#1976D2" }} />
             <Box>
-              <Typography variant="caption" sx={{ color: "#1e3a8a" }}>
+              <Typography variant="caption" sx={{ color: "#1976D2" }}>
                 Revisión
               </Typography>
               <Typography
                 variant="body2"
-                sx={{ fontWeight: 600, color: "#1e3a8a" }}
+                sx={{ fontWeight: 600, color: "#1976D2" }}
               >
                 Comentarios sobre versión v2
               </Typography>
             </Box>
           </Box>
-          <Typography variant="caption" sx={{ color: "#475569", mt: 0.5 }}>
+          <Typography variant="caption" sx={{ color: "#757575", mt: 0.5 }}>
             En revisión · 10:03
           </Typography>
         </Paper>
@@ -288,24 +288,24 @@ function Login() {
             borderRadius: 2,
             minWidth: 200,
             backgroundColor: "#ffffff",
-            border: "1px solid rgba(65, 105, 225, 0.32)",
+            border: "1px solid rgba(25, 118, 210, 0.32)",
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <CheckCircle sx={{ color: "#1e3a8a" }} />
+            <CheckCircle sx={{ color: "#1976D2" }} />
             <Box>
-              <Typography variant="caption" sx={{ color: "#334155" }}>
+              <Typography variant="caption" sx={{ color: "#616161" }}>
                 Versión aprobada
               </Typography>
               <Typography
                 variant="body2"
-                sx={{ fontWeight: 600, color: "#1e3a8a" }}
+                sx={{ fontWeight: 600, color: "#1976D2" }}
               >
                 Instructivo Calidad_v3.pdf
               </Typography>
             </Box>
           </Box>
-          <Typography variant="caption" sx={{ color: "#475569", mt: 0.5 }}>
+          <Typography variant="caption" sx={{ color: "#757575", mt: 0.5 }}>
             Publicada · 11:27
           </Typography>
         </Paper>
@@ -318,10 +318,10 @@ function Login() {
             p: 4,
             borderRadius: 4,
             background:
-              "linear-gradient(135deg, #ffffff 0%, #e8ecff 48%, #f4f6ff 100%)",
+              "linear-gradient(135deg, #ffffff 0%, #E3F2FD 48%, #E3F2FD 100%)",
             backdropFilter: "blur(16px)",
-            boxShadow: "0 18px 50px rgba(65, 105, 225, 0.18)",
-            border: "1px solid rgba(65, 105, 225, 0.2)",
+            boxShadow: "0 18px 50px rgba(25, 118, 210, 0.18)",
+            border: "1px solid rgba(25, 118, 210, 0.2)",
           }}
         >
           <Box
@@ -343,7 +343,7 @@ function Login() {
               variant="h4"
               sx={{
                 fontWeight: 700,
-                color: "#1e3a8a",
+                color: "#1976D2",
                 mb: 1,
                 letterSpacing: 1,
               }}
@@ -352,7 +352,7 @@ function Login() {
             </Typography>
             <Typography
               variant="body2"
-              sx={{ color: "rgba(30, 58, 138, 0.75)", textAlign: "center" }}
+              sx={{ color: "#757575", textAlign: "center" }}
             >
               Inicia sesión con tus credenciales de Tristone
             </Typography>
@@ -371,29 +371,29 @@ function Login() {
               sx={{
                 mb: 3,
                 "& .MuiOutlinedInput-root": {
-                  borderRadius: 2,
+                  borderRadius: "8px",
                   backgroundColor: "#ffffff",
                   "& fieldset": {
-                    borderColor: "rgba(65, 105, 225, 0.26)",
+                    borderColor: "rgba(0, 0, 0, 0.12)",
                   },
-                  "&:hover fieldset": { borderColor: "#4169E1" },
+                  "&:hover fieldset": { borderColor: "#1976D2" },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#4169E1",
+                    borderColor: "#1976D2",
                     borderWidth: 2,
                   },
                 },
                 "& .MuiInputBase-input": {
-                  color: "#1e3a8a",
+                  color: "#212121",
                 },
                 "& .MuiInputLabel-root": {
-                  color: "rgba(30, 58, 138, 0.75)",
-                  "&.Mui-focused": { color: "#1e3a8a" },
+                  color: "#757575",
+                  "&.Mui-focused": { color: "#1976D2" },
                 },
               }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Person sx={{ color: "#1e3a8a" }} />
+                    <Person sx={{ color: "#1976D2" }} />
                   </InputAdornment>
                 ),
               }}
@@ -412,29 +412,29 @@ function Login() {
               sx={{
                 mb: 3,
                 "& .MuiOutlinedInput-root": {
-                  borderRadius: 2,
+                  borderRadius: "8px",
                   backgroundColor: "#ffffff",
                   "& fieldset": {
-                    borderColor: "rgba(65, 105, 225, 0.26)",
+                    borderColor: "rgba(0, 0, 0, 0.12)",
                   },
-                  "&:hover fieldset": { borderColor: "#4169E1" },
+                  "&:hover fieldset": { borderColor: "#1976D2" },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#4169E1",
+                    borderColor: "#1976D2",
                     borderWidth: 2,
                   },
                 },
                 "& .MuiInputBase-input": {
-                  color: "#1e3a8a",
+                  color: "#212121",
                 },
                 "& .MuiInputLabel-root": {
-                  color: "rgba(30, 58, 138, 0.75)",
-                  "&.Mui-focused": { color: "#1e3a8a" },
+                  color: "#757575",
+                  "&.Mui-focused": { color: "#1976D2" },
                 },
               }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Lock sx={{ color: "#1e3a8a" }} />
+                    <Lock sx={{ color: "#1976D2" }} />
                   </InputAdornment>
                 ),
                 endAdornment: (
@@ -442,7 +442,7 @@ function Login() {
                     <IconButton
                       onClick={() => setShowPassword(!showPassword)}
                       edge="end"
-                      sx={{ color: "#1e3a8a" }}
+                      sx={{ color: "#1976D2" }}
                       disabled={loading}
                     >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
@@ -456,37 +456,30 @@ function Login() {
               type="submit"
               fullWidth
               variant="contained"
+              color="primary"
               size="large"
               disabled={loading}
               sx={{
                 py: 1.5,
-                borderRadius: 2,
-                background:
-                  "linear-gradient(135deg, #f4f6ff 0%, #e8ecff 45%, #e0e7ff 100%)",
+                borderRadius: "8px",
                 fontWeight: 600,
                 fontSize: "1rem",
                 textTransform: "none",
-                color: "#1e3a8a",
-                border: "1px solid #4169E1",
-                boxShadow: "0 6px 18px rgba(65, 105, 225, 0.15)",
-                transition: "all 0.3s ease",
+                boxShadow: "0 4px 12px rgba(25, 118, 210, 0.35)",
                 "&:hover": {
-                  background:
-                    "linear-gradient(135deg, #e8ecff 0%, #e0e7ff 40%, #c7d2fe 100%)",
-                  transform: "translateY(-2px)",
-                  color: "#1e3a8a",
+                  boxShadow: "0 6px 16px rgba(25, 118, 210, 0.45)",
                 },
                 "&:disabled": {
-                  background: "#e2e8f0",
-                  color: "#64748b",
-                  borderColor: "#cbd5e1",
+                  background: "#E0E0E0",
+                  color: "#757575",
+                  borderColor: "transparent",
                   transform: "none",
                 },
               }}
             >
               {loading ? (
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <CircularProgress size={20} sx={{ color: "#1e3a8a" }} />
+                  <CircularProgress size={20} sx={{ color: "#ffffff" }} />
                   Iniciando Sesión...
                 </Box>
               ) : (

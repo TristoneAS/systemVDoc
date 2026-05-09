@@ -459,7 +459,7 @@ function Configuracion() {
           maxWidth: { xs: "100%", md: "600px" },
           width: { xs: "100%", lg: "auto" },
           backgroundColor: "#ffffff",
-          border: "1px solid rgba(65, 105, 225, 0.16)",
+          border: "1px solid rgba(25, 118, 210, 0.16)",
           borderRadius: 3,
           overflow: "hidden",
           ml: { xs: 0, lg: 4 },
@@ -470,18 +470,18 @@ function Configuracion() {
           value={activeTab}
           onChange={handleTabChange}
           sx={{
-            borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
+            borderBottom: "1px solid rgba(25, 118, 210, 0.14)",
             "& .MuiTab-root": {
-              color: "rgba(30, 58, 138, 0.75)",
+              color: "#424242",
               fontWeight: 600,
               textTransform: "none",
               fontSize: "1rem",
               "&.Mui-selected": {
-                color: "#1e3a8a",
+                color: "#0D47A1",
               },
             },
             "& .MuiTabs-indicator": {
-              backgroundColor: "#4169E1",
+              backgroundColor: "#1976D2",
             },
           }}
         >
@@ -495,7 +495,7 @@ function Configuracion() {
             <Typography
               variant="h6"
               sx={{
-                color: "#1e3a8a",
+                color: "#0D47A1",
                 mb: 3,
                 fontWeight: 600,
               }}
@@ -513,37 +513,41 @@ function Configuracion() {
               sx={{
                 mb: 3,
                 "& .MuiOutlinedInput-root": {
-                  backgroundColor: "rgba(2,6,23,0.5)",
+                  backgroundColor: "#FFFFFF",
                   borderRadius: 2,
-                  color: "#1e3a8a",
+                  color: "#212121",
                   "& fieldset": {
-                    borderColor: "rgba(65, 105, 225, 0.16)",
+                    borderColor: "rgba(0, 0, 0, 0.23)",
                   },
                   "&:hover fieldset": {
-                    borderColor: "#4169E1",
+                    borderColor: "#1976D2",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#4169E1",
+                    borderColor: "#1976D2",
                     borderWidth: 2,
                   },
                 },
                 "& .MuiInputLabel-root": {
-                  color: "rgba(30, 58, 138, 0.75)",
+                  color: "#424242",
                   "&.Mui-focused": {
-                    color: "#1e3a8a",
+                    color: "#1976D2",
                   },
                 },
                 "& .MuiInputBase-input": {
-                  color: "#1e3a8a",
+                  color: "#212121",
+                },
+                "& .MuiInputBase-input::placeholder": {
+                  color: "#757575",
+                  opacity: 1,
                 },
               }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
                     {loadingEmpleado ? (
-                      <CircularProgress size={20} sx={{ color: "#1e3a8a" }} />
+                      <CircularProgress size={20} sx={{ color: "#1976D2" }} />
                     ) : (
-                      <Person sx={{ color: "#1e3a8a" }} />
+                      <Person sx={{ color: "#1976D2" }} />
                     )}
                   </InputAdornment>
                 ),
@@ -561,11 +565,11 @@ function Configuracion() {
                   mb: 2,
                 }}
               >
-                <CircularProgress size={20} sx={{ color: "#1e3a8a" }} />
+                <CircularProgress size={20} sx={{ color: "#1976D2" }} />
                 <Typography
                   variant="body2"
                   sx={{
-                    color: "rgba(30, 58, 138, 0.75)",
+                    color: "#424242",
                   }}
                 >
                   Buscando empleado...
@@ -578,11 +582,11 @@ function Configuracion() {
                 severity="error"
                 sx={{
                   mb: 2,
-                  backgroundColor: "rgba(65, 105, 225, 0.09)",
-                  color: "#b91c1c",
-                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                  backgroundColor: "#FFEBEE",
+                  color: "#B71C1C",
+                  border: "1px solid #EF9A9A",
                   "& .MuiAlert-icon": {
-                    color: "#b91c1c",
+                    color: "#C62828",
                   },
                 }}
               >
@@ -597,11 +601,11 @@ function Configuracion() {
                     severity="warning"
                     sx={{
                       mb: 2,
-                      backgroundColor: "rgba(251, 191, 36, 0.12)",
-                      color: "#1e3a8a",
-                      border: "1px solid rgba(251, 191, 36, 0.35)",
+                      backgroundColor: "#FFF8E1",
+                      color: "#E65100",
+                      border: "1px solid #FFCC80",
                       "& .MuiAlert-icon": {
-                        color: "#FBBF24",
+                        color: "#F57C00",
                       },
                     }}
                   >
@@ -611,17 +615,17 @@ function Configuracion() {
                 <Box
                   sx={{
                     p: 2,
-                    backgroundColor: "rgba(65, 105, 225, 0.09)",
+                    backgroundColor: "#F5F5F5",
                     borderRadius: 2,
-                    border: "1px solid rgba(65, 105, 225, 0.16)",
+                    border: "1px solid rgba(0, 0, 0, 0.08)",
                     mb: 2,
                   }}
                 >
                   <Typography
                     variant="body1"
                     sx={{
-                      color: "#1e3a8a",
-                      fontWeight: 500,
+                      color: "#212121",
+                      fontWeight: 600,
                     }}
                   >
                     Nombre: {datosEmpleado.nombre}
@@ -629,7 +633,7 @@ function Configuracion() {
                   <Typography
                     variant="caption"
                     sx={{
-                      color: "rgba(30, 58, 138, 0.75)",
+                      color: "#424242",
                       display: "block",
                       mt: 1,
                     }}
@@ -639,7 +643,7 @@ function Configuracion() {
                   <Typography
                     variant="caption"
                     sx={{
-                      color: "rgba(30, 58, 138, 0.75)",
+                      color: "#424242",
                       display: "block",
                       mt: 0.5,
                     }}
@@ -653,6 +657,7 @@ function Configuracion() {
 
                 <Button
                   variant="contained"
+                  color="primary"
                   fullWidth
                   onClick={handleGuardarAprobador}
                   disabled={
@@ -662,27 +667,17 @@ function Configuracion() {
                   sx={{
                     py: 1.5,
                     borderRadius: 2,
-                    background:
-                      "linear-gradient(135deg, #f4f6ff 0%, #e8ecff 45%, #e0e7ff 100%)",
                     fontWeight: 600,
                     fontSize: "1rem",
                     textTransform: "none",
-                    color: "#1e3a8a",
-                    border: "1px solid #4169E1",
-                    boxShadow: "0 4px 10px rgba(65, 105, 225, 0.15)",
-                    transition: "all 0.3s ease",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.12)",
                     "&:hover": {
-                      background:
-                        "linear-gradient(135deg, #e8ecff 0%, #e0e7ff 45%, #c7d2fe 100%)",
-                      transform: "translateY(-2px)",
-                      color: "#1e3a8a",
-                      boxShadow: "0 6px 15px rgba(65, 105, 225, 0.2)",
+                      boxShadow: "0 4px 12px rgba(25, 118, 210, 0.4)",
                     },
                     "&:disabled": {
-                      background: "#e2e8f0",
-                      color: "#64748b",
-                      borderColor: "#cbd5e1",
-                      transform: "none",
+                      backgroundColor: "#E0E0E0",
+                      color: "#616161",
+                      boxShadow: "none",
                     },
                   }}
                 >
@@ -694,7 +689,7 @@ function Configuracion() {
                         gap: 1,
                       }}
                     >
-                      <CircularProgress size={20} sx={{ color: "#1e3a8a" }} />
+                      <CircularProgress size={20} color="inherit" />
                       Guardando...
                     </Box>
                   ) : (
@@ -707,11 +702,11 @@ function Configuracion() {
                     severity="success"
                     sx={{
                       mt: 2,
-                      backgroundColor: "rgba(34, 197, 94, 0.1)",
-                      color: "#1e3a8a",
-                      border: "1px solid rgba(34, 197, 94, 0.3)",
+                      backgroundColor: "#E8F5E9",
+                      color: "#1B5E20",
+                      border: "1px solid #A5D6A7",
                       "& .MuiAlert-icon": {
-                        color: "#1e3a8a",
+                        color: "#2E7D32",
                       },
                     }}
                     onClose={() => setMensajeExito("")}
@@ -725,7 +720,7 @@ function Configuracion() {
             <Typography
               variant="h6"
               sx={{
-                color: "#1e3a8a",
+                color: "#0D47A1",
                 fontWeight: 600,
                 mb: 3,
                 mt: 4,
@@ -743,7 +738,7 @@ function Configuracion() {
                   py: 4,
                 }}
               >
-                <CircularProgress sx={{ color: "#1e3a8a" }} />
+                <CircularProgress sx={{ color: "#1976D2" }} />
               </Box>
             )}
 
@@ -752,11 +747,11 @@ function Configuracion() {
                 severity="error"
                 sx={{
                   mb: 2,
-                  backgroundColor: "rgba(65, 105, 225, 0.09)",
-                  color: "#b91c1c",
-                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                  backgroundColor: "#FFEBEE",
+                  color: "#B71C1C",
+                  border: "1px solid #EF9A9A",
                   "& .MuiAlert-icon": {
-                    color: "#b91c1c",
+                    color: "#C62828",
                   },
                 }}
                 onClose={() => setErrorAprobadores("")}
@@ -770,11 +765,11 @@ function Configuracion() {
                 severity="success"
                 sx={{
                   mb: 2,
-                  backgroundColor: "rgba(34, 197, 94, 0.1)",
-                  color: "#1e3a8a",
-                  border: "1px solid rgba(34, 197, 94, 0.3)",
+                  backgroundColor: "#E8F5E9",
+                  color: "#1B5E20",
+                  border: "1px solid #A5D6A7",
                   "& .MuiAlert-icon": {
-                    color: "#1e3a8a",
+                    color: "#2E7D32",
                   },
                 }}
                 onClose={() => setMensajeExitoEliminar("")}
@@ -809,8 +804,8 @@ function Configuracion() {
                       transform: "translateY(-2px)",
                     },
                     "&:disabled": {
-                      backgroundColor: "#fef2f2",
-                      color: "#9ca3af",
+                      backgroundColor: "#FFEBEE",
+                      color: "#616161",
                       transform: "none",
                     },
                   }}
@@ -836,38 +831,44 @@ function Configuracion() {
             {!loadingAprobadores && !errorAprobadores && (
               <TableContainer
                 component={Paper}
+                elevation={0}
                 sx={{
-                  backgroundColor: "#f4f6ff",
+                  backgroundColor: "#FFFFFF",
                   borderRadius: 2,
-                  border: "1px solid rgba(65, 105, 225, 0.14)",
+                  border: "1px solid rgba(0, 0, 0, 0.12)",
                 }}
               >
                 <Table>
                   <TableHead>
-                    <TableRow>
+                    <TableRow
+                      sx={{
+                        backgroundColor: "#E3F2FD",
+                        "& th": { borderBottom: "1px solid rgba(0, 0, 0, 0.12)" },
+                      }}
+                    >
                       <TableCell
                         sx={{
-                          color: "#1e3a8a",
-                          fontWeight: 600,
-                          borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
+                          color: "#0D47A1",
+                          fontWeight: 700,
+                          borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
                         }}
                       >
                         ID Empleado
                       </TableCell>
                       <TableCell
                         sx={{
-                          color: "#1e3a8a",
-                          fontWeight: 600,
-                          borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
+                          color: "#0D47A1",
+                          fontWeight: 700,
+                          borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
                         }}
                       >
                         Nombre
                       </TableCell>
                       <TableCell
                         sx={{
-                          color: "#1e3a8a",
-                          fontWeight: 600,
-                          borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
+                          color: "#0D47A1",
+                          fontWeight: 700,
+                          borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
                         }}
                       >
                         Correo
@@ -881,7 +882,7 @@ function Configuracion() {
                           colSpan={3}
                           sx={{
                             textAlign: "center",
-                            color: "rgba(30, 58, 138, 0.75)",
+                            color: "#616161",
                             py: 4,
                           }}
                         >
@@ -902,28 +903,26 @@ function Configuracion() {
                             sx={{
                               cursor: "pointer",
                               backgroundColor: isSelected
-                                ? "rgba(65, 105, 225, 0.1)"
+                                ? "rgba(25, 118, 210, 0.1)"
                                 : "transparent",
                               "&:hover": {
                                 backgroundColor: isSelected
-                                  ? "rgba(65, 105, 225, 0.14)"
-                                  : "rgba(65, 105, 225, 0.06)",
+                                  ? "rgba(25, 118, 210, 0.14)"
+                                  : "rgba(25, 118, 210, 0.06)",
                               },
                               borderBottom:
                                 index < aprobadores.length - 1
-                                  ? "1px solid rgba(65, 105, 225, 0.1)"
+                                  ? "1px solid rgba(0, 0, 0, 0.08)"
                                   : "none",
                               borderLeft: isSelected
-                                ? "3px solid #4169E1"
+                                ? "3px solid #1976D2"
                                 : "3px solid transparent",
                               transition: "all 0.2s ease",
                             }}
                           >
                             <TableCell
                               sx={{
-                                color: isSelected
-                                  ? "#1e3a8a"
-                                  : "rgba(30, 58, 138, 0.9)",
+                                color: isSelected ? "#0D47A1" : "#212121",
                                 borderBottom: "none",
                                 fontWeight: isSelected ? 600 : 400,
                               }}
@@ -932,9 +931,7 @@ function Configuracion() {
                             </TableCell>
                             <TableCell
                               sx={{
-                                color: isSelected
-                                  ? "#1e3a8a"
-                                  : "rgba(30, 58, 138, 0.9)",
+                                color: isSelected ? "#0D47A1" : "#212121",
                                 borderBottom: "none",
                                 fontWeight: isSelected ? 600 : 400,
                               }}
@@ -943,7 +940,7 @@ function Configuracion() {
                             </TableCell>
                             <TableCell
                               sx={{
-                                color: isSelected ? "#334155" : "#CBD5E1",
+                                color: isSelected ? "#0D47A1" : "#212121",
                                 borderBottom: "none",
                                 fontWeight: isSelected ? 500 : 400,
                                 fontSize: "0.875rem",
@@ -970,7 +967,7 @@ function Configuracion() {
             <Typography
               variant="h6"
               sx={{
-                color: "#1e3a8a",
+                color: "#0D47A1",
                 mb: 3,
                 fontWeight: 600,
               }}
@@ -987,34 +984,38 @@ function Configuracion() {
               sx={{
                 mb: 3,
                 "& .MuiOutlinedInput-root": {
-                  backgroundColor: "rgba(2,6,23,0.5)",
+                  backgroundColor: "#FFFFFF",
                   borderRadius: 2,
-                  color: "#1e3a8a",
+                  color: "#212121",
                   "& fieldset": {
-                    borderColor: "rgba(65, 105, 225, 0.16)",
+                    borderColor: "rgba(0, 0, 0, 0.23)",
                   },
                   "&:hover fieldset": {
-                    borderColor: "#4169E1",
+                    borderColor: "#1976D2",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#4169E1",
+                    borderColor: "#1976D2",
                     borderWidth: 2,
                   },
                 },
                 "& .MuiInputLabel-root": {
-                  color: "rgba(30, 58, 138, 0.75)",
+                  color: "#424242",
                   "&.Mui-focused": {
-                    color: "#1e3a8a",
+                    color: "#1976D2",
                   },
                 },
                 "& .MuiInputBase-input": {
-                  color: "#1e3a8a",
+                  color: "#212121",
+                },
+                "& .MuiInputBase-input::placeholder": {
+                  color: "#757575",
+                  opacity: 1,
                 },
               }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Business sx={{ color: "#1e3a8a" }} />
+                    <Business sx={{ color: "#1976D2" }} />
                   </InputAdornment>
                 ),
               }}
@@ -1022,7 +1023,7 @@ function Configuracion() {
 
             <Typography
               variant="body2"
-              sx={{ color: "rgba(30, 58, 138, 0.75)", mb: 2 }}
+              sx={{ color: "#757575", mb: 2 }}
             ></Typography>
 
             <TextField
@@ -1035,37 +1036,41 @@ function Configuracion() {
               sx={{
                 mb: 2,
                 "& .MuiOutlinedInput-root": {
-                  backgroundColor: "rgba(2,6,23,0.5)",
+                  backgroundColor: "#FFFFFF",
                   borderRadius: 2,
-                  color: "#1e3a8a",
+                  color: "#212121",
                   "& fieldset": {
-                    borderColor: "rgba(65, 105, 225, 0.16)",
+                    borderColor: "rgba(0, 0, 0, 0.23)",
                   },
                   "&:hover fieldset": {
-                    borderColor: "#4169E1",
+                    borderColor: "#1976D2",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#4169E1",
+                    borderColor: "#1976D2",
                     borderWidth: 2,
                   },
                 },
                 "& .MuiInputLabel-root": {
-                  color: "rgba(30, 58, 138, 0.75)",
+                  color: "#424242",
                   "&.Mui-focused": {
-                    color: "#1e3a8a",
+                    color: "#1976D2",
                   },
                 },
                 "& .MuiInputBase-input": {
-                  color: "#1e3a8a",
+                  color: "#212121",
+                },
+                "& .MuiInputBase-input::placeholder": {
+                  color: "#757575",
+                  opacity: 1,
                 },
               }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
                     {loadingEmpleadoArea ? (
-                      <CircularProgress size={20} sx={{ color: "#1e3a8a" }} />
+                      <CircularProgress size={20} sx={{ color: "#1976D2" }} />
                     ) : (
-                      <Person sx={{ color: "#1e3a8a" }} />
+                      <Person sx={{ color: "#1976D2" }} />
                     )}
                   </InputAdornment>
                 ),
@@ -1083,8 +1088,8 @@ function Configuracion() {
                   mb: 2,
                 }}
               >
-                <CircularProgress size={20} sx={{ color: "#1e3a8a" }} />
-                <Typography variant="body2" sx={{ color: "rgba(30, 58, 138, 0.75)" }}>
+                <CircularProgress size={20} sx={{ color: "#1976D2" }} />
+                <Typography variant="body2" sx={{ color: "#424242" }}>
                   Buscando empleado...
                 </Typography>
               </Box>
@@ -1095,11 +1100,11 @@ function Configuracion() {
                 severity="error"
                 sx={{
                   mb: 2,
-                  backgroundColor: "rgba(65, 105, 225, 0.09)",
-                  color: "#b91c1c",
-                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                  backgroundColor: "#FFEBEE",
+                  color: "#B71C1C",
+                  border: "1px solid #EF9A9A",
                   "& .MuiAlert-icon": {
-                    color: "#b91c1c",
+                    color: "#C62828",
                   },
                 }}
                 onClose={() => setErrorEmpleadoResponsable("")}
@@ -1115,11 +1120,11 @@ function Configuracion() {
                     severity="warning"
                     sx={{
                       mb: 2,
-                      backgroundColor: "rgba(251, 191, 36, 0.12)",
-                      color: "#1e3a8a",
-                      border: "1px solid rgba(251, 191, 36, 0.35)",
+                      backgroundColor: "#FFF8E1",
+                      color: "#E65100",
+                      border: "1px solid #FFCC80",
                       "& .MuiAlert-icon": {
-                        color: "#FBBF24",
+                        color: "#F57C00",
                       },
                     }}
                   >
@@ -1129,26 +1134,26 @@ function Configuracion() {
                 <Box
                   sx={{
                     p: 2,
-                    backgroundColor: "rgba(65, 105, 225, 0.09)",
+                    backgroundColor: "#F5F5F5",
                     borderRadius: 2,
-                    border: "1px solid rgba(65, 105, 225, 0.16)",
+                    border: "1px solid rgba(0, 0, 0, 0.08)",
                   }}
                 >
                   <Typography
                     variant="body1"
-                    sx={{ color: "#1e3a8a", fontWeight: 500 }}
+                    sx={{ color: "#212121", fontWeight: 600 }}
                   >
                     Nombre: {datosEmpleadoArea.nombre}
                   </Typography>
                   <Typography
                     variant="caption"
-                    sx={{ color: "rgba(30, 58, 138, 0.75)", display: "block", mt: 1 }}
+                    sx={{ color: "#424242", display: "block", mt: 1 }}
                   >
                     ID: {datosEmpleadoArea.emp_id}
                   </Typography>
                   <Typography
                     variant="caption"
-                    sx={{ color: "rgba(30, 58, 138, 0.75)", display: "block", mt: 0.5 }}
+                    sx={{ color: "#424242", display: "block", mt: 0.5 }}
                   >
                     Correo:{" "}
                     {empleadoTieneCorreoRegistrado(datosEmpleadoArea)
@@ -1164,11 +1169,11 @@ function Configuracion() {
                 severity="success"
                 sx={{
                   mb: 2,
-                  backgroundColor: "rgba(34, 197, 94, 0.1)",
-                  color: "#1e3a8a",
-                  border: "1px solid rgba(34, 197, 94, 0.3)",
+                  backgroundColor: "#E8F5E9",
+                  color: "#1B5E20",
+                  border: "1px solid #A5D6A7",
                   "& .MuiAlert-icon": {
-                    color: "#1e3a8a",
+                    color: "#2E7D32",
                   },
                 }}
                 onClose={() => setMensajeExitoArea("")}
@@ -1180,6 +1185,7 @@ function Configuracion() {
             <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
               <Button
                 variant="contained"
+                color="primary"
                 fullWidth
                 onClick={handleGuardarArea}
                 disabled={
@@ -1191,27 +1197,17 @@ function Configuracion() {
                 sx={{
                   py: 1.5,
                   borderRadius: 2,
-                  background:
-                    "linear-gradient(135deg, #f4f6ff 0%, #e8ecff 45%, #e0e7ff 100%)",
                   fontWeight: 600,
                   fontSize: "1rem",
                   textTransform: "none",
-                  color: "#1e3a8a",
-                  border: "1px solid #4169E1",
-                  boxShadow: "0 4px 10px rgba(65, 105, 225, 0.15)",
-                  transition: "all 0.3s ease",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.12)",
                   "&:hover": {
-                    background:
-                      "linear-gradient(135deg, #e8ecff 0%, #e0e7ff 45%, #c7d2fe 100%)",
-                    transform: "translateY(-2px)",
-                    color: "#1e3a8a",
-                    boxShadow: "0 6px 15px rgba(65, 105, 225, 0.2)",
+                    boxShadow: "0 4px 12px rgba(25, 118, 210, 0.4)",
                   },
                   "&:disabled": {
-                    background: "#e2e8f0",
-                    color: "#64748b",
-                    borderColor: "#cbd5e1",
-                    transform: "none",
+                    backgroundColor: "#E0E0E0",
+                    color: "#616161",
+                    boxShadow: "none",
                   },
                 }}
               >
@@ -1223,7 +1219,7 @@ function Configuracion() {
                       gap: 1,
                     }}
                   >
-                    <CircularProgress size={20} sx={{ color: "#1e3a8a" }} />
+                    <CircularProgress size={20} color="inherit" />
                     {editandoArea ? "Modificando..." : "Guardando..."}
                   </Box>
                 ) : editandoArea ? (
@@ -1242,15 +1238,15 @@ function Configuracion() {
                   sx={{
                     py: 1.5,
                     borderRadius: 2,
-                    borderColor: "rgba(65, 105, 225, 0.16)",
-                    color: "rgba(30, 58, 138, 0.75)",
+                    borderColor: "rgba(0, 0, 0, 0.23)",
+                    color: "#424242",
                     fontWeight: 600,
                     fontSize: "1rem",
                     textTransform: "none",
                     "&:hover": {
-                      borderColor: "#4169E1",
-                      color: "#1e3a8a",
-                      backgroundColor: "rgba(65, 105, 225, 0.09)",
+                      borderColor: "#1976D2",
+                      color: "#0D47A1",
+                      backgroundColor: "rgba(25, 118, 210, 0.06)",
                     },
                   }}
                 >
@@ -1262,7 +1258,7 @@ function Configuracion() {
             <Typography
               variant="h6"
               sx={{
-                color: "#1e3a8a",
+                color: "#0D47A1",
                 fontWeight: 600,
                 mb: 3,
                 mt: 4,
@@ -1280,7 +1276,7 @@ function Configuracion() {
                   py: 4,
                 }}
               >
-                <CircularProgress sx={{ color: "#1e3a8a" }} />
+                <CircularProgress sx={{ color: "#1976D2" }} />
               </Box>
             )}
 
@@ -1289,11 +1285,11 @@ function Configuracion() {
                 severity="error"
                 sx={{
                   mb: 2,
-                  backgroundColor: "rgba(65, 105, 225, 0.09)",
-                  color: "#b91c1c",
-                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                  backgroundColor: "#FFEBEE",
+                  color: "#B71C1C",
+                  border: "1px solid #EF9A9A",
                   "& .MuiAlert-icon": {
-                    color: "#b91c1c",
+                    color: "#C62828",
                   },
                 }}
                 onClose={() => setErrorAreas("")}
@@ -1307,11 +1303,11 @@ function Configuracion() {
                 severity="success"
                 sx={{
                   mb: 2,
-                  backgroundColor: "rgba(34, 197, 94, 0.1)",
-                  color: "#1e3a8a",
-                  border: "1px solid rgba(34, 197, 94, 0.3)",
+                  backgroundColor: "#E8F5E9",
+                  color: "#1B5E20",
+                  border: "1px solid #A5D6A7",
                   "& .MuiAlert-icon": {
-                    color: "#1e3a8a",
+                    color: "#2E7D32",
                   },
                 }}
                 onClose={() => setMensajeExitoEliminarArea("")}
@@ -1323,25 +1319,24 @@ function Configuracion() {
             {areaSeleccionada && !editandoArea && (
               <Box sx={{ mb: 2, display: "flex", gap: 2 }}>
                 <Button
-                  variant="contained"
+                  variant="outlined"
+                  color="primary"
                   startIcon={<Edit />}
                   onClick={handleEditarArea}
                   sx={{
                     py: 1,
                     px: 2,
                     borderRadius: 2,
-                    backgroundColor: "#e0e7ff",
                     fontWeight: 600,
                     fontSize: "0.875rem",
                     textTransform: "none",
-                    color: "#1e3a8a",
-                    border: "1px solid #4169E1",
-                    boxShadow: "none",
-                    transition: "all 0.3s ease",
+                    borderWidth: 2,
+                    color: "#0D47A1",
+                    borderColor: "#1976D2",
                     "&:hover": {
-                      backgroundColor: "#c7d2fe",
-                      color: "#1e3a8a",
-                      transform: "translateY(-2px)",
+                      borderWidth: 2,
+                      borderColor: "#0D47A1",
+                      backgroundColor: "rgba(25, 118, 210, 0.06)",
                     },
                   }}
                 >
@@ -1371,8 +1366,8 @@ function Configuracion() {
                       transform: "translateY(-2px)",
                     },
                     "&:disabled": {
-                      backgroundColor: "#fef2f2",
-                      color: "#9ca3af",
+                      backgroundColor: "#FFEBEE",
+                      color: "#616161",
                       transform: "none",
                     },
                   }}
@@ -1398,56 +1393,64 @@ function Configuracion() {
             {!loadingAreas && !errorAreas && (
               <TableContainer
                 component={Paper}
+                elevation={0}
                 sx={{
-                  backgroundColor: "#f4f6ff",
+                  backgroundColor: "#FFFFFF",
                   borderRadius: 2,
-                  border: "1px solid rgba(65, 105, 225, 0.14)",
+                  border: "1px solid rgba(0, 0, 0, 0.12)",
                 }}
               >
                 <Table>
                   <TableHead>
-                    <TableRow>
+                    <TableRow
+                      sx={{
+                        backgroundColor: "#E3F2FD",
+                        "& th": {
+                          borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
+                        },
+                      }}
+                    >
                       <TableCell
                         sx={{
-                          color: "#1e3a8a",
-                          fontWeight: 600,
-                          borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
+                          color: "#0D47A1",
+                          fontWeight: 700,
+                          borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
                         }}
                       >
                         ID Área
                       </TableCell>
                       <TableCell
                         sx={{
-                          color: "#1e3a8a",
-                          fontWeight: 600,
-                          borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
+                          color: "#0D47A1",
+                          fontWeight: 700,
+                          borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
                         }}
                       >
                         Nombre del Área
                       </TableCell>
                       <TableCell
                         sx={{
-                          color: "#1e3a8a",
-                          fontWeight: 600,
-                          borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
+                          color: "#0D47A1",
+                          fontWeight: 700,
+                          borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
                         }}
                       >
                         ID empleado
                       </TableCell>
                       <TableCell
                         sx={{
-                          color: "#1e3a8a",
-                          fontWeight: 600,
-                          borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
+                          color: "#0D47A1",
+                          fontWeight: 700,
+                          borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
                         }}
                       >
                         Nombre (emp_nombre)
                       </TableCell>
                       <TableCell
                         sx={{
-                          color: "#1e3a8a",
-                          fontWeight: 600,
-                          borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
+                          color: "#0D47A1",
+                          fontWeight: 700,
+                          borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
                         }}
                       >
                         Correo
@@ -1461,7 +1464,7 @@ function Configuracion() {
                           colSpan={5}
                           sx={{
                             textAlign: "center",
-                            color: "rgba(30, 58, 138, 0.75)",
+                            color: "#616161",
                             py: 4,
                           }}
                         >
@@ -1480,28 +1483,26 @@ function Configuracion() {
                             sx={{
                               cursor: "pointer",
                               backgroundColor: isSelected
-                                ? "rgba(65, 105, 225, 0.1)"
+                                ? "rgba(25, 118, 210, 0.1)"
                                 : "transparent",
                               "&:hover": {
                                 backgroundColor: isSelected
-                                  ? "rgba(65, 105, 225, 0.14)"
-                                  : "rgba(65, 105, 225, 0.06)",
+                                  ? "rgba(25, 118, 210, 0.14)"
+                                  : "rgba(25, 118, 210, 0.06)",
                               },
                               borderBottom:
                                 index < areas.length - 1
-                                  ? "1px solid rgba(65, 105, 225, 0.1)"
+                                  ? "1px solid rgba(0, 0, 0, 0.08)"
                                   : "none",
                               borderLeft: isSelected
-                                ? "3px solid #4169E1"
+                                ? "3px solid #1976D2"
                                 : "3px solid transparent",
                               transition: "all 0.2s ease",
                             }}
                           >
                             <TableCell
                               sx={{
-                                color: isSelected
-                                  ? "#1e3a8a"
-                                  : "rgba(30, 58, 138, 0.9)",
+                                color: isSelected ? "#0D47A1" : "#212121",
                                 borderBottom: "none",
                                 fontWeight: isSelected ? 600 : 400,
                               }}
@@ -1510,9 +1511,7 @@ function Configuracion() {
                             </TableCell>
                             <TableCell
                               sx={{
-                                color: isSelected
-                                  ? "#1e3a8a"
-                                  : "rgba(30, 58, 138, 0.9)",
+                                color: isSelected ? "#0D47A1" : "#212121",
                                 borderBottom: "none",
                                 fontWeight: isSelected ? 600 : 400,
                               }}
@@ -1521,9 +1520,7 @@ function Configuracion() {
                             </TableCell>
                             <TableCell
                               sx={{
-                                color: isSelected
-                                  ? "#1e3a8a"
-                                  : "rgba(30, 58, 138, 0.9)",
+                                color: isSelected ? "#0D47A1" : "#212121",
                                 borderBottom: "none",
                                 fontWeight: isSelected ? 600 : 400,
                               }}
@@ -1532,9 +1529,7 @@ function Configuracion() {
                             </TableCell>
                             <TableCell
                               sx={{
-                                color: isSelected
-                                  ? "#1e3a8a"
-                                  : "rgba(30, 58, 138, 0.9)",
+                                color: isSelected ? "#0D47A1" : "#212121",
                                 borderBottom: "none",
                                 fontWeight: isSelected ? 600 : 400,
                               }}
@@ -1543,7 +1538,7 @@ function Configuracion() {
                             </TableCell>
                             <TableCell
                               sx={{
-                                color: isSelected ? "#334155" : "#CBD5E1",
+                                color: isSelected ? "#0D47A1" : "#212121",
                                 borderBottom: "none",
                                 fontWeight: isSelected ? 500 : 400,
                                 fontSize: "0.875rem",

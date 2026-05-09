@@ -19,7 +19,6 @@ import {
   Home,
   Description,
   Assignment,
-  VerifiedUser,
   Settings,
   ExpandLess,
   ExpandMore,
@@ -27,11 +26,12 @@ import {
   Visibility,
   Create,
   List as ListIcon,
+  Person,
   Logout,
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 
-const drawerWidth = 280;
+const drawerWidth = 240;
 
 const AUTH_STORAGE_KEYS = [
   "infoUser",
@@ -101,19 +101,18 @@ function buildMenuItems(isAdmin) {
           route: "/dashboard/solicitudes/crear",
         },
         {
+          id: "mis_solicitudes",
+          title: "Mis solicitudes",
+          icon: Person,
+          route: "/dashboard/mis_solicitudes",
+        },
+        {
           id: "ver-solicitudes",
           title: "Ver Solicitudes",
           icon: ListIcon,
           route: "/dashboard/solicitudes",
         },
       ],
-    },
-    {
-      id: "autorizaciones",
-      title: "Autorizaciones",
-      icon: VerifiedUser,
-      description: "Gestionar autorizaciones",
-      route: "/dashboard/autorizaciones",
     },
     {
       id: "configuracion",
@@ -161,6 +160,7 @@ function HexagonMenu({ selectedItemId, children }) {
     }
     if (
       selectedItemId === "crear-solicitud" ||
+      selectedItemId === "mis_solicitudes" ||
       selectedItemId === "ver-solicitudes"
     ) {
       setExpandedItems((prev) => ({ ...prev, solicitudes: true }));
@@ -215,21 +215,26 @@ function HexagonMenu({ selectedItemId, children }) {
         sx={{
           width: `calc(100% - ${drawerWidth}px)`,
           ml: `${drawerWidth}px`,
-          backgroundColor: "#ffffff",
-          backdropFilter: "blur(10px)",
-          borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+          backgroundColor: "#1976D2",
+          minHeight: { xs: 56, sm: 60 },
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.12)",
         }}
       >
-        <Toolbar>
+        <Toolbar
+          sx={{
+            minHeight: { xs: 56, sm: 60 },
+            px: { xs: 2, sm: 3 },
+          }}
+        >
           <Typography
-            variant="h5"
+            variant="h6"
             component="div"
             sx={{
               flexGrow: 1,
               fontWeight: 700,
-              color: "#1e3a8a",
-              textShadow: "0 0 20px rgba(65, 105, 225, 0.28)",
+              color: "#ffffff",
+              fontSize: { xs: "1.05rem", sm: "1.2rem" },
+              letterSpacing: "0.02em",
             }}
           >
             System V-Docs
@@ -245,10 +250,8 @@ function HexagonMenu({ selectedItemId, children }) {
           "& .MuiDrawer-paper": {
             width: drawerWidth,
             boxSizing: "border-box",
-            backgroundColor: "#e0e7ff",
-            borderRight: "1px solid rgba(65, 105, 225, 0.14)",
-            background:
-              "linear-gradient(180deg, #e8ecff 0%, #c7d2fe 100%)",
+            backgroundColor: "#FFFFFF",
+            borderRight: "1px solid rgba(0, 0, 0, 0.08)",
             display: "flex",
             flexDirection: "column",
             height: "100%",
@@ -259,23 +262,23 @@ function HexagonMenu({ selectedItemId, children }) {
       >
         <Toolbar
           sx={{
-            backgroundColor: "#ffffff",
-            borderBottom: "1px solid rgba(65, 105, 225, 0.14)",
-            minHeight: "64px !important",
+            backgroundColor: "#FFFFFF",
+            borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+            minHeight: { xs: 56, sm: 60 },
           }}
         >
           <Typography
             variant="h6"
             sx={{
               fontWeight: 700,
-              color: "#1e3a8a",
-              fontSize: "1.25rem",
+              color: "#1976D2",
+              fontSize: "1.15rem",
             }}
           >
             Menú
           </Typography>
         </Toolbar>
-        <Divider sx={{ borderColor: "rgba(65, 105, 225, 0.14)" }} />
+        <Divider sx={{ borderColor: "rgba(0, 0, 0, 0.08)" }} />
         <List sx={{ pt: 2, flex: 1, overflow: "auto" }}>
           {menuItems.map((item) => {
             const IconComponent = item.icon;
@@ -291,25 +294,21 @@ function HexagonMenu({ selectedItemId, children }) {
                     onClick={() => handleItemClick(item)}
                     sx={{
                       borderRadius: 2,
-                      backgroundColor: isSelected
-                        ? "rgba(65, 105, 225, 0.1)"
-                        : "transparent",
-                      border: isSelected
-                        ? "2px solid #4169E1"
-                        : "2px solid transparent",
+                      py: 1.125,
+                      backgroundColor: isSelected ? "#1976D2" : "transparent",
+                      border: "none",
                       "&:hover": {
                         backgroundColor: isSelected
-                          ? "rgba(65, 105, 225, 0.15)"
-                          : "rgba(65, 105, 225, 0.09)",
-                        borderColor: "#4169E1",
+                          ? "#1565C0"
+                          : "rgba(25, 118, 210, 0.06)",
                       },
-                      transition: "all 0.3s ease",
+                      transition: "background-color 0.2s ease",
                     }}
                   >
                     <ListItemIcon
                       sx={{
                         minWidth: 40,
-                        color: isSelected ? "#4169E1" : "rgba(30, 58, 138, 0.75)",
+                        color: isSelected ? "#ffffff" : "#616161",
                       }}
                     >
                       <IconComponent />
@@ -320,23 +319,33 @@ function HexagonMenu({ selectedItemId, children }) {
                       primaryTypographyProps={{
                         sx: {
                           fontWeight: isSelected ? 600 : 500,
-                          color: isSelected ? "#1e3a8a" : "#1e3a8a",
+                          color: isSelected ? "#ffffff" : "#212121",
                           fontSize: "0.95rem",
                         },
                       }}
                       secondaryTypographyProps={{
                         sx: {
                           fontSize: "0.75rem",
-                          color: isSelected ? "#475569" : "rgba(30, 58, 138, 0.75)",
+                          color: isSelected
+                            ? "rgba(255,255,255,0.88)"
+                            : "#757575",
                           mt: 0.5,
                         },
                       }}
                     />
                     {item.hasSubmenu &&
                       (isExpanded ? (
-                        <ExpandLess sx={{ color: "#1e3a8a" }} />
+                        <ExpandLess
+                          sx={{
+                            color: isSelected ? "#ffffff" : "#616161",
+                          }}
+                        />
                       ) : (
-                        <ExpandMore sx={{ color: "rgba(30, 58, 138, 0.75)" }} />
+                        <ExpandMore
+                          sx={{
+                            color: isSelected ? "#ffffff" : "#616161",
+                          }}
+                        />
                       ))}
                   </ListItemButton>
                 </ListItem>
@@ -358,25 +367,23 @@ function HexagonMenu({ selectedItemId, children }) {
                               onClick={() => handleSubmenuClick(subItem)}
                               sx={{
                                 borderRadius: 2,
+                                py: 0.875,
                                 backgroundColor: isSubSelected
-                                  ? "rgba(65, 105, 225, 0.14)"
+                                  ? "#1976D2"
                                   : "transparent",
-                                border: isSubSelected
-                                  ? "2px solid #4169E1"
-                                  : "2px solid transparent",
+                                border: "none",
                                 "&:hover": {
                                   backgroundColor: isSubSelected
-                                    ? "rgba(65, 105, 225, 0.16)"
-                                    : "rgba(65, 105, 225, 0.09)",
-                                  borderColor: "#4169E1",
+                                    ? "#1565C0"
+                                    : "rgba(25, 118, 210, 0.06)",
                                 },
-                                transition: "all 0.3s ease",
+                                transition: "background-color 0.2s ease",
                               }}
                             >
                               <ListItemIcon
                                 sx={{
                                   minWidth: 32,
-                                  color: isSubSelected ? "#4169E1" : "rgba(30, 58, 138, 0.75)",
+                                  color: isSubSelected ? "#ffffff" : "#616161",
                                 }}
                               >
                                 <SubIconComponent sx={{ fontSize: 20 }} />
@@ -386,9 +393,7 @@ function HexagonMenu({ selectedItemId, children }) {
                                 primaryTypographyProps={{
                                   sx: {
                                     fontWeight: isSubSelected ? 600 : 500,
-                                    color: isSubSelected
-                                      ? "#1e3a8a"
-                                      : "#1e3a8a",
+                                    color: isSubSelected ? "#ffffff" : "#212121",
                                     fontSize: "0.875rem",
                                   },
                                 }}
@@ -404,23 +409,23 @@ function HexagonMenu({ selectedItemId, children }) {
             );
           })}
         </List>
-        <Divider sx={{ borderColor: "rgba(65, 105, 225, 0.14)" }} />
+        <Divider sx={{ borderColor: "rgba(0, 0, 0, 0.08)" }} />
         <List sx={{ py: 1.5, px: 1.5, flexShrink: 0 }}>
           <ListItem disablePadding>
             <ListItemButton
               onClick={handleLogout}
               sx={{
                 borderRadius: 2,
-                border: "2px solid rgba(65, 105, 225, 0.28)",
-                backgroundColor: "rgba(65, 105, 225, 0.08)",
+                border: "1px solid rgba(0, 0, 0, 0.12)",
+                backgroundColor: "#FAFAFA",
                 "&:hover": {
-                  backgroundColor: "rgba(65, 105, 225, 0.14)",
-                  borderColor: "rgba(255,255,255,0.42)",
+                  backgroundColor: "rgba(25, 118, 210, 0.06)",
+                  borderColor: "rgba(25, 118, 210, 0.25)",
                 },
-                transition: "all 0.3s ease",
+                transition: "all 0.2s ease",
               }}
             >
-              <ListItemIcon sx={{ minWidth: 40, color: "#1e3a8a" }}>
+              <ListItemIcon sx={{ minWidth: 40, color: "#616161" }}>
                 <Logout />
               </ListItemIcon>
               <ListItemText
@@ -428,7 +433,7 @@ function HexagonMenu({ selectedItemId, children }) {
                 primaryTypographyProps={{
                   sx: {
                     fontWeight: 600,
-                    color: "#1e3a8a",
+                    color: "#212121",
                     fontSize: "0.95rem",
                   },
                 }}
@@ -443,38 +448,14 @@ function HexagonMenu({ selectedItemId, children }) {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: { xs: 2, sm: 3 },
           width: `calc(100% - ${drawerWidth}px)`,
           minHeight: "100vh",
-          backgroundColor:
-            "radial-gradient(circle at top left, #ffffff 0%, #f4f6ff 38%, #e8ecff 72%, #ffffff 100%)",
+          backgroundColor: "#F8F9FA",
           position: "relative",
-          overflow: "hidden",
-          "&::before": {
-            content: '""',
-            position: "absolute",
-            width: "600px",
-            height: "600px",
-            borderRadius: "50%",
-            background: "rgba(65, 105, 225, 0.06)",
-            top: "-200px",
-            right: "-200px",
-            pointerEvents: "none",
-          },
-          "&::after": {
-            content: '""',
-            position: "absolute",
-            width: "500px",
-            height: "500px",
-            borderRadius: "50%",
-            background: "rgba(65, 105, 225, 0.05)",
-            bottom: "-150px",
-            left: "-150px",
-            pointerEvents: "none",
-          },
         }}
       >
-        <Toolbar />
+        <Toolbar sx={{ minHeight: { xs: 56, sm: 60 } }} />
         <Box sx={{ position: "relative", zIndex: 1 }}>{children}</Box>
       </Box>
     </Box>
