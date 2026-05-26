@@ -6,18 +6,12 @@ import {
   Typography,
   Button,
   Paper,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Alert,
   CircularProgress,
   Grid,
   Chip,
   Divider,
 } from "@mui/material";
-import { Email, Assignment, Schedule } from "@mui/icons-material";
+import { Assignment, Schedule } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 import HexagonMenu from "./HexagonMenu";
 
@@ -180,12 +174,6 @@ function Dashboard() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [nombreBienvenida, setNombreBienvenida] = useState("");
-  const [open, setOpen] = useState(false);
-  const [to, setTo] = useState("");
-  const [subject, setSubject] = useState("");
-  const [text, setText] = useState("");
-  const [sending, setSending] = useState(false);
-  const [feedback, setFeedback] = useState(null);
   const [pendientes, setPendientes] = useState([]);
   const [loadingPendientes, setLoadingPendientes] = useState(true);
 
@@ -203,7 +191,11 @@ function Dashboard() {
         return;
       }
       const list = Array.isArray(data.data) ? data.data : [];
-      setPendientes(list.filter((row) => row.estado === "pendiente"));
+      setPendientes(
+        list.filter(
+          (row) => row.estado === "pendiente" && Boolean(row.puede_aprobar),
+        ),
+      );
     } catch {
       setPendientes([]);
     } finally {
@@ -220,50 +212,6 @@ function Dashboard() {
     if (!mounted) return;
     cargarPendientes();
   }, [mounted, cargarPendientes]);
-
-  const handleClose = () => {
-    if (sending) return;
-    setOpen(false);
-    setFeedback(null);
-  };
-
-  const handleSend = async () => {
-    setFeedback(null);
-    setSending(true);
-    try {
-      const res = await fetch("/api/send-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to, subject, text }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setFeedback({
-          severity: "error",
-          text: data.error || "No se pudo enviar el correo",
-        });
-        return;
-      }
-      setFeedback({
-        severity: "success",
-        text: data.message || "Correo enviado correctamente",
-      });
-      setTo("");
-      setSubject("");
-      setText("");
-      setTimeout(() => {
-        setOpen(false);
-        setFeedback(null);
-      }, 1500);
-    } catch {
-      setFeedback({
-        severity: "error",
-        text: "Error de conexión con el servidor",
-      });
-    } finally {
-      setSending(false);
-    }
-  };
 
   if (!mounted) {
     return null;
@@ -380,7 +328,7 @@ function Dashboard() {
               boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.06)",
             }}
           >
-            No hay solicitudes pendientes.
+            No tienes solicitudes pendientes por aprobar.
           </Paper>
         ) : (
           <>
@@ -404,141 +352,6 @@ function Dashboard() {
           </>
         )}
       </Box>
-
-      <Paper
-        elevation={0}
-        sx={{
-          p: { xs: 3, sm: 4 },
-          maxWidth: 1200,
-          mx: "auto",
-          backgroundColor: "#ffffff",
-          border: "1px solid rgba(0, 0, 0, 0.06)",
-          borderRadius: "8px",
-          boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.08)",
-        }}
-      >
-        <Typography
-          variant="h6"
-          sx={{
-            color: "#1976D2",
-            fontWeight: 700,
-            fontSize: "1.15rem",
-            mb: 1,
-            textAlign: "center",
-          }}
-        >
-          Panel principal
-        </Typography>
-        <Typography
-          variant="body2"
-          sx={{ color: "#757575", textAlign: "center", mb: 4, fontSize: "0.9rem" }}
-        >
-          Use el menú lateral para navegar o envíe un correo desde aquí.
-        </Typography>
-
-        <Box sx={{ display: "flex", justifyContent: "center" }}>
-          <Button
-            variant="contained"
-            color="primary"
-            size="large"
-            startIcon={<Email />}
-            onClick={() => {
-              setFeedback(null);
-              setOpen(true);
-            }}
-            sx={{
-              px: 4,
-              py: 1.5,
-              fontWeight: 600,
-              borderRadius: "8px",
-              fontSize: "0.95rem",
-            }}
-          >
-            Enviar correo
-          </Button>
-        </Box>
-      </Paper>
-
-      <Dialog
-        open={open}
-        onClose={handleClose}
-        fullWidth
-        maxWidth="sm"
-        PaperProps={{
-          sx: {
-            backgroundColor: "#ffffff",
-            border: "1px solid rgba(0, 0, 0, 0.08)",
-            borderRadius: "8px",
-          },
-        }}
-      >
-        <DialogTitle sx={{ color: "#1976D2", fontWeight: 700, fontSize: "1.15rem" }}>
-          Enviar correo
-        </DialogTitle>
-        <DialogContent>
-          {feedback && (
-            <Alert severity={feedback.severity} sx={{ mb: 2 }}>
-              {feedback.text}
-            </Alert>
-          )}
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Para"
-            type="email"
-            fullWidth
-            required
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            placeholder="correo@ejemplo.com"
-            sx={{
-              mb: 2,
-              "& .MuiOutlinedInput-root": { color: "#212121" },
-              "& .MuiInputLabel-root": { color: "#757575" },
-            }}
-          />
-          <TextField
-            margin="dense"
-            label="Asunto"
-            fullWidth
-            required
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            sx={{
-              mb: 2,
-              "& .MuiOutlinedInput-root": { color: "#212121" },
-              "& .MuiInputLabel-root": { color: "#757575" },
-            }}
-          />
-          <TextField
-            margin="dense"
-            label="Mensaje"
-            fullWidth
-            multiline
-            minRows={6}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Escriba el cuerpo del correo…"
-            sx={{
-              "& .MuiOutlinedInput-root": { color: "#212121" },
-              "& .MuiInputLabel-root": { color: "#757575" },
-            }}
-          />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleClose} disabled={sending} sx={{ color: "#757575" }}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSend}
-            variant="contained"
-            disabled={sending || !to.trim() || !subject.trim()}
-            startIcon={sending ? <CircularProgress size={18} color="inherit" /> : null}
-          >
-            {sending ? "Enviando…" : "Enviar"}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </HexagonMenu>
   );
 }

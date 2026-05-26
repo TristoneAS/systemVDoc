@@ -52,6 +52,8 @@ function NuevoDocumento({
     nomenclatura: "",
     confirmar_nomenclatura: "",
     nombre_documento: "",
+    tiempo_retencion: "",
+    ubicacion_registro: "",
     id_area: "",
     archivos: [],
   });
@@ -238,6 +240,8 @@ function NuevoDocumento({
       formDataToSend.append("nomenclatura", formData.nomenclatura);
       formDataToSend.append("nombre_documento", formData.nombre_documento);
       formDataToSend.append("id_area", String(formData.id_area));
+      formDataToSend.append("tiempo_retencion", formData.tiempo_retencion);
+      formDataToSend.append("ubicacion_registro", formData.ubicacion_registro);
 
       formData.archivos.forEach((archivo) => {
         formDataToSend.append("archivos", archivo);
@@ -302,6 +306,8 @@ function NuevoDocumento({
           nomenclatura: "",
           confirmar_nomenclatura: "",
           nombre_documento: "",
+          tiempo_retencion: "",
+          ubicacion_registro: "",
           id_area: "",
           archivos: [],
         });
@@ -350,7 +356,7 @@ function NuevoDocumento({
                     color: "#757575",
                   },
                 }}
-                helperText="Consecutivo sugerido; el definitivo se asigna al guardar"
+                helperText="Consecutivo automatico"
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -419,9 +425,7 @@ function NuevoDocumento({
                     },
                   },
                   "& .MuiFormHelperText-root": {
-                    color: errors.nomenclatura
-                      ? "#b91c1c"
-                      : "#757575",
+                    color: errors.nomenclatura ? "#b91c1c" : "#757575",
                   },
                 }}
               />
@@ -523,8 +527,7 @@ function NuevoDocumento({
                   </FormHelperText>
                 ) : (
                   <FormHelperText sx={{ color: "#757575" }}>
-                    Solo se guarda el identificador del área; el responsable se
-                    actualiza en configuración sin afectar documentos existentes
+                    Seleccione el area responsable del documento
                   </FormHelperText>
                 )}
               </FormControl>
@@ -564,9 +567,85 @@ function NuevoDocumento({
                     },
                   },
                   "& .MuiFormHelperText-root": {
-                    color: errors.nombre_documento
-                      ? "#b91c1c"
-                      : "#757575",
+                    color: errors.nombre_documento ? "#b91c1c" : "#757575",
+                  },
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Tiempo de retención"
+                value={formData.tiempo_retencion}
+                onChange={(e) =>
+                  handleInputChange("tiempo_retencion", e.target.value)
+                }
+                inputProps={{ maxLength: 200 }}
+                helperText="Opcional · máx. 200 caracteres"
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    backgroundColor: "#FFFFFF",
+                    color: "#212121",
+                    "& fieldset": {
+                      borderColor: "rgba(25, 118, 210, 0.16)",
+                    },
+                    "&:hover fieldset": {
+                      borderColor: "#1976D2",
+                    },
+                    "&.Mui-focused fieldset": {
+                      borderColor: "#1976D2",
+                    },
+                    "& .MuiInputBase-input": {
+                      color: "#212121",
+                    },
+                  },
+                  "& .MuiInputLabel-root": {
+                    color: "#757575",
+                    "&.Mui-focused": {
+                      color: "#1976D2",
+                    },
+                  },
+                  "& .MuiFormHelperText-root": {
+                    color: "#757575",
+                  },
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Ubicación del registro"
+                value={formData.ubicacion_registro}
+                onChange={(e) =>
+                  handleInputChange("ubicacion_registro", e.target.value)
+                }
+                inputProps={{ maxLength: 200 }}
+                helperText="Opcional · máx. 200 caracteres"
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    backgroundColor: "#FFFFFF",
+                    color: "#212121",
+                    "& fieldset": {
+                      borderColor: "rgba(25, 118, 210, 0.16)",
+                    },
+                    "&:hover fieldset": {
+                      borderColor: "#1976D2",
+                    },
+                    "&.Mui-focused fieldset": {
+                      borderColor: "#1976D2",
+                    },
+                    "& .MuiInputBase-input": {
+                      color: "#212121",
+                    },
+                  },
+                  "& .MuiInputLabel-root": {
+                    color: "#757575",
+                    "&.Mui-focused": {
+                      color: "#1976D2",
+                    },
+                  },
+                  "& .MuiFormHelperText-root": {
+                    color: "#757575",
                   },
                 }}
               />
@@ -626,10 +705,7 @@ function NuevoDocumento({
                   Cargar Archivos (Excel, PDF, Word, PowerPoint)
                 </Button>
               </label>
-              <Typography
-                variant="caption"
-                sx={{ color: "#757575", mt: 2 }}
-              >
+              <Typography variant="caption" sx={{ color: "#757575", mt: 2 }}>
                 Formatos permitidos: .xlsx, .xls, .pdf, .doc, .docx, .ppt, .pptx
               </Typography>
             </Box>
@@ -745,7 +821,7 @@ function NuevoDocumento({
             mb: 4,
           }}
         >
-          Alta directa al catálogo de documentos (sin pasar por solicitudes).
+          Alta directa al catálogo de documentos.
         </Typography>
       ) : (
         <Typography
@@ -890,7 +966,7 @@ function NuevoDocumento({
             onClick={handleNext}
             sx={{
               backgroundColor: "#FFFFFF",
-                    color: "#212121",
+              color: "#212121",
               border: "1px solid #1976D2",
               px: 4,
               py: 1,

@@ -10,7 +10,7 @@ export async function GET(_request, { params }) {
 
   try {
     const [rows] = await conn.query(
-      `SELECT id, id_solicitud, emp_id, emp_nombre, emp_correo, status, comentario
+      `SELECT id, id_solicitud, emp_id, emp_nombre, emp_correo, status, tipo_aprobador, comentario
        FROM aprobaciones
        WHERE id_solicitud = ?
        ORDER BY id ASC`,

@@ -26,12 +26,7 @@ import {
   Tooltip,
   Divider,
 } from "@mui/material";
-import {
-  Check,
-  Close,
-  InsertDriveFile,
-  Visibility,
-} from "@mui/icons-material";
+import { Check, Close, InsertDriveFile, Visibility } from "@mui/icons-material";
 import HexagonMenu from "./HexagonMenu";
 
 function formatFecha(v) {
@@ -176,11 +171,22 @@ function labelEstadoChip(estado) {
 }
 
 function backgroundEstadoAprobacion(status) {
-  const s = String(status || "").toLowerCase().trim();
+  const s = String(status || "")
+    .toLowerCase()
+    .trim();
   if (s === "pendiente") return "#FB8500";
   if (s === "aprobada" || s === "aprobado") return "#1B5E20";
   if (s === "rechazada" || s === "rechazado") return "#C62828";
   return "#757575";
+}
+
+function labelTipoAprobador(tipo) {
+  const t = String(tipo ?? "").trim();
+  if (t === "jefe_directo") return "Jefe directo";
+  if (t === "responsable_area") return "Responsable de área";
+  if (t === "forzado") return "Requerido";
+  if (!t) return "—";
+  return t;
 }
 
 /**
@@ -191,8 +197,7 @@ export function getSolicitanteParaSolicitud() {
     const raw = localStorage.getItem("infoUser");
     if (!raw) return { emp_id_solicitante: "", solicitante: "" };
     const u = JSON.parse(raw);
-    const emp_id_solicitante =
-      u?.emp_id != null ? String(u.emp_id).trim() : "";
+    const emp_id_solicitante = u?.emp_id != null ? String(u.emp_id).trim() : "";
     const solicitante =
       u?.emp_nombre != null ? String(u.emp_nombre).trim() : "";
     return { emp_id_solicitante, solicitante };
@@ -205,9 +210,7 @@ export function getSolicitanteParaSolicitud() {
 function textoSolicitante(r) {
   const nombre = String(r?.solicitante ?? "").trim();
   const emp =
-    r?.emp_id_solicitante != null
-      ? String(r.emp_id_solicitante).trim()
-      : "";
+    r?.emp_id_solicitante != null ? String(r.emp_id_solicitante).trim() : "";
   if (nombre && emp) return `${nombre} · ${emp}`;
   if (nombre) return nombre;
   if (emp) return emp;
@@ -336,7 +339,10 @@ function Solicitudes({ misSolicitudes = false }) {
       });
       const data = await res.json();
       if (!res.ok) {
-        setBanner({ severity: "error", text: data.error || "Error al procesar" });
+        setBanner({
+          severity: "error",
+          text: data.error || "Error al procesar",
+        });
         return;
       }
       setBanner({
@@ -437,21 +443,21 @@ function Solicitudes({ misSolicitudes = false }) {
             </>
           ) : (
             <>
-              En la primera fase solo puede aprobar el jefe directo del solicitante.
-              En la segunda fase deben aprobar <strong>todos</strong> los empleados que
-              están en el listado de aprobadores más el responsable del área del
-              trámite; cada uno registra su visto bueno. Cuando todos hayan
-              aprobado, el documento se da de alta o se incorporan los archivos al
-              documento existente.
+              En la primera fase solo puede aprobar el jefe directo del
+              solicitante. En la segunda fase deben aprobar{" "}
+              <strong>todos</strong> los empleados que están en el listado de
+              aprobadores más el responsable del área del trámite; cada uno
+              registra su visto bueno. Cuando todos hayan aprobado, el documento
+              se da de alta o se incorporan los archivos al documento existente.
             </>
           )}
         </Typography>
 
         {schemaFase2Pendiente && !misSolicitudes && (
           <Alert severity="warning" sx={{ mb: 2 }}>
-            Falta crear la tabla <strong>solicitud_aprobaciones_fase2</strong> en
-            la base de datos. El listado se muestra, pero aprobar o rechazar en
-            segunda fase fallará hasta ejecutar el script{" "}
+            Falta crear la tabla <strong>solicitud_aprobaciones_fase2</strong>{" "}
+            en la base de datos. El listado se muestra, pero aprobar o rechazar
+            en segunda fase fallará hasta ejecutar el script{" "}
             <strong>database/create_solicitud_aprobaciones_fase2.sql</strong> en
             la base configurada (p. ej. <code>v_docs</code>).
           </Alert>
@@ -461,14 +467,14 @@ function Solicitudes({ misSolicitudes = false }) {
           <Alert severity="warning" sx={{ mb: 2 }}>
             {misSolicitudes ? (
               <>
-                No se encontró su <strong>emp_id</strong> en la sesión. No se pueden
-                listar sus solicitudes hasta que vuelva a iniciar sesión.
+                No se encontró su <strong>emp_id</strong> en la sesión. No se
+                pueden listar sus solicitudes hasta que vuelva a iniciar sesión.
               </>
             ) : (
               <>
-                No se encontró su <strong>emp_id</strong> en la sesión. Las acciones
-                de aprobar o rechazar pueden no estar disponibles hasta que vuelva a
-                iniciar sesión.
+                No se encontró su <strong>emp_id</strong> en la sesión. Las
+                acciones de aprobar o rechazar pueden no estar disponibles hasta
+                que vuelva a iniciar sesión.
               </>
             )}
           </Alert>
@@ -518,7 +524,7 @@ function Solicitudes({ misSolicitudes = false }) {
                   <TableCell>ID</TableCell>
                   <TableCell>Tipo</TableCell>
                   <TableCell>Estado</TableCell>
-                  <TableCell>Fase</TableCell>
+                  {!misSolicitudes && <TableCell>Fase</TableCell>}
                   <TableCell>ID documento</TableCell>
                   <TableCell>Detalle</TableCell>
                   <TableCell>Quién realizó la solicitud</TableCell>
@@ -529,7 +535,10 @@ function Solicitudes({ misSolicitudes = false }) {
               <TableBody>
                 {rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} sx={{ color: "#757575", border: 0 }}>
+                    <TableCell
+                      colSpan={misSolicitudes ? 8 : 9}
+                      sx={{ color: "#757575", border: 0 }}
+                    >
                       {misSolicitudes
                         ? "No tiene solicitudes registradas a su nombre."
                         : "No hay solicitudes registradas."}
@@ -539,263 +548,267 @@ function Solicitudes({ misSolicitudes = false }) {
                   rows.map((r) => {
                     const puedeAprobar = r.puede_aprobar === true;
                     const puedeRechazar = r.puede_rechazar === true;
-                    const faseLabel = labelFaseAprobacion(r);
+                    const faseLabel = misSolicitudes
+                      ? null
+                      : labelFaseAprobacion(r);
                     return (
-                    <TableRow
-                      key={r.id_solicitud}
-                      sx={{
-                        backgroundColor: "#ffffff",
-                        "&:last-child td": {
-                          borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
-                        },
-                        "& td": {
-                          color: "#212121",
-                          borderColor: "rgba(0, 0, 0, 0.08)",
-                          borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
-                          verticalAlign: "middle",
-                          fontSize: "0.875rem",
-                        },
-                      }}
-                    >
-                      <TableCell>
-                        <Typography
-                          component="span"
-                          sx={{ fontWeight: 500, color: "#212121" }}
-                        >
-                          #{r.id_solicitud}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          size="small"
-                          label={r.tipo === "nuevo" ? "Nuevo" : "Cambio"}
-                          sx={{
-                            height: 26,
-                            borderRadius: 999,
-                            bgcolor: "#ECEFF1",
-                            color: "#37474F",
-                            fontWeight: 600,
-                            fontSize: "0.72rem",
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          size="small"
-                          label={labelEstadoChip(r.estado)}
-                          sx={{
-                            ...chipPillBase,
-                            backgroundColor:
-                              r.estado === "pendiente"
-                                ? "#FB8500"
-                                : r.estado === "aprobada"
-                                  ? "#1B5E20"
-                                  : "#C62828",
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ maxWidth: 200, verticalAlign: "top" }}>
-                        {r.estado === "pendiente" ? (
-                          <Box>
-                            <Chip
-                              size="small"
-                              label={faseLabel}
-                              sx={{
-                                height: 26,
-                                borderRadius: 999,
-                                bgcolor: "#ECEFF1",
-                                color: "#37474F",
-                                fontWeight: 500,
-                                fontSize: "0.72rem",
-                              }}
-                            />
-                            {faseLabel === "Comité / área" &&
-                              r.fase2_total != null &&
-                              Number(r.fase2_total) > 0 && (
-                                <Typography
-                                  variant="caption"
-                                  component="div"
-                                  sx={{
-                                    mt: 0.75,
-                                    color: "rgba(33, 33, 33, 0.82)",
-                                    lineHeight: 1.35,
-                                  }}
-                                >
-                                  {Number(r.fase2_completadas) || 0} /{" "}
-                                  {Number(r.fase2_total)} aprobaciones
-                                </Typography>
-                              )}
-                          </Box>
-                        ) : (
-                          "—"
-                        )}
-                      </TableCell>
-                      <TableCell
+                      <TableRow
+                        key={r.id_solicitud}
                         sx={{
-                          maxWidth: 180,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {r.id_documento}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          maxWidth: 280,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {r.tipo === "cambio"
-                          ? r.motivo || "—"
-                          : r.nombre_documento || "—"}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          maxWidth: 260,
-                          verticalAlign: "top",
-                          py: 1.5,
-                        }}
-                      >
-                        <Typography
-                          variant="body2"
-                          sx={{
+                          backgroundColor: "#ffffff",
+                          "&:last-child td": {
+                            borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+                          },
+                          "& td": {
                             color: "#212121",
-                            wordBreak: "break-word",
-                          }}
-                          title={textoSolicitante(r)}
-                        >
-                          {textoSolicitante(r)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell sx={{ whiteSpace: "nowrap" }}>
-                        {formatFecha(r.fecha_creacion)}
-                      </TableCell>
-                      <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
-                        <Box
+                            borderColor: "rgba(0, 0, 0, 0.08)",
+                            borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+                            verticalAlign: "middle",
+                            fontSize: "0.875rem",
+                          },
+                        }}
+                      >
+                        <TableCell>
+                          <Typography
+                            component="span"
+                            sx={{ fontWeight: 500, color: "#212121" }}
+                          >
+                            #{r.id_solicitud}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            size="small"
+                            label={r.tipo === "nuevo" ? "Nuevo" : "Cambio"}
+                            sx={{
+                              height: 26,
+                              borderRadius: 999,
+                              bgcolor: "#ECEFF1",
+                              color: "#37474F",
+                              fontWeight: 600,
+                              fontSize: "0.72rem",
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            size="small"
+                            label={labelEstadoChip(r.estado)}
+                            sx={{
+                              ...chipPillBase,
+                              backgroundColor:
+                                r.estado === "pendiente"
+                                  ? "#FB8500"
+                                  : r.estado === "aprobada"
+                                    ? "#1B5E20"
+                                    : "#C62828",
+                            }}
+                          />
+                        </TableCell>
+                        {!misSolicitudes && (
+                          <TableCell sx={{ maxWidth: 200, verticalAlign: "top" }}>
+                            {r.estado === "pendiente" ? (
+                              <Box>
+                                <Chip
+                                  size="small"
+                                  label={faseLabel}
+                                  sx={{
+                                    height: 26,
+                                    borderRadius: 999,
+                                    bgcolor: "#ECEFF1",
+                                    color: "#37474F",
+                                    fontWeight: 500,
+                                    fontSize: "0.72rem",
+                                  }}
+                                />
+                                {faseLabel === "Comité / área" &&
+                                  r.fase2_total != null &&
+                                  Number(r.fase2_total) > 0 && (
+                                    <Typography
+                                      variant="caption"
+                                      component="div"
+                                      sx={{
+                                        mt: 0.75,
+                                        color: "rgba(33, 33, 33, 0.82)",
+                                        lineHeight: 1.35,
+                                      }}
+                                    >
+                                      {Number(r.fase2_completadas) || 0} /{" "}
+                                      {Number(r.fase2_total)} aprobaciones
+                                    </Typography>
+                                  )}
+                              </Box>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
+                        )}
+                        <TableCell
                           sx={{
-                            display: "flex",
-                            gap: 0.5,
-                            justifyContent: "flex-end",
-                            alignItems: "center",
+                            maxWidth: 180,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
                           }}
                         >
-                          <Tooltip title="Ver solicitante, documentos y aprobaciones">
-                            <span>
-                              <IconButton
-                                size="small"
-                                disabled={
-                                  dialogAprobacionesLoading &&
-                                  dialogAprobacionesId === r.id_solicitud
-                                }
-                                onClick={() => abrirAprobaciones(r)}
-                                sx={{ color: "#1976D2" }}
-                                aria-label="Ver detalle de la solicitud"
-                              >
-                                {dialogAprobacionesLoading &&
-                                dialogAprobacionesId === r.id_solicitud ? (
-                                  <CircularProgress
-                                    size={22}
-                                    thickness={5}
-                                    sx={{ color: "#1976D2" }}
-                                  />
-                                ) : (
-                                  <Visibility sx={{ fontSize: 22 }} />
-                                )}
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                          {!misSolicitudes && (
-                            <>
-                              <Tooltip
-                                title={
-                                  r.estado !== "pendiente"
-                                    ? "Solo aplica a solicitudes pendientes"
-                                    : !puedeAprobar
-                                      ? "No tiene permiso para aprobar esta solicitud"
-                                      : sinEmpEnSesion
-                                        ? "Inicie sesión de nuevo"
-                                        : "Aprobar solicitud"
-                                }
-                              >
-                                <span>
-                                  <IconButton
-                                    size="small"
-                                    disabled={
-                                      r.estado !== "pendiente" ||
-                                      actionId !== null ||
-                                      !puedeAprobar ||
-                                      sinEmpEnSesion
-                                    }
-                                    onClick={() =>
-                                      abrirModalResolver(
-                                        r.id_solicitud,
-                                        "aprobar",
-                                      )
-                                    }
-                                    sx={{
-                                      color: "#2E7D32",
-                                      "&.Mui-disabled": {
-                                        color: "rgba(46, 125, 50, 0.28)",
-                                      },
-                                    }}
-                                    aria-label="Aprobar solicitud"
-                                  >
-                                    {actionId === r.id_solicitud ? (
-                                      <CircularProgress
-                                        size={22}
-                                        thickness={5}
-                                        sx={{ color: "#2E7D32" }}
-                                      />
-                                    ) : (
-                                      <Check sx={{ fontSize: 24 }} />
-                                    )}
-                                  </IconButton>
-                                </span>
-                              </Tooltip>
-                              <Tooltip
-                                title={
-                                  r.estado !== "pendiente"
-                                    ? "Solo aplica a solicitudes pendientes"
-                                    : !puedeRechazar
-                                      ? "No tiene permiso para rechazar esta solicitud"
-                                      : sinEmpEnSesion
-                                        ? "Inicie sesión de nuevo"
-                                        : "Rechazar solicitud"
-                                }
-                              >
-                                <span>
-                                  <IconButton
-                                    size="small"
-                                    disabled={
-                                      r.estado !== "pendiente" ||
-                                      actionId !== null ||
-                                      !puedeRechazar ||
-                                      sinEmpEnSesion
-                                    }
-                                    onClick={() =>
-                                      abrirModalResolver(
-                                        r.id_solicitud,
-                                        "rechazar",
-                                      )
-                                    }
-                                    sx={{
-                                      color: "#D32F2F",
-                                      "&.Mui-disabled": {
-                                        color: "rgba(211, 47, 47, 0.28)",
-                                      },
-                                    }}
-                                    aria-label="Rechazar solicitud"
-                                  >
-                                    <Close sx={{ fontSize: 24 }} />
-                                  </IconButton>
-                                </span>
-                              </Tooltip>
-                            </>
-                          )}
-                        </Box>
-                      </TableCell>
-                    </TableRow>
+                          {r.id_documento}
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            maxWidth: 280,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {r.tipo === "cambio"
+                            ? r.motivo || "—"
+                            : r.nombre_documento || "—"}
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            maxWidth: 260,
+                            verticalAlign: "top",
+                            py: 1.5,
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: "#212121",
+                              wordBreak: "break-word",
+                            }}
+                            title={textoSolicitante(r)}
+                          >
+                            {textoSolicitante(r)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: "nowrap" }}>
+                          {formatFecha(r.fecha_creacion)}
+                        </TableCell>
+                        <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              gap: 0.5,
+                              justifyContent: "flex-end",
+                              alignItems: "center",
+                            }}
+                          >
+                            <Tooltip title="Ver solicitante, documentos y aprobaciones">
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  disabled={
+                                    dialogAprobacionesLoading &&
+                                    dialogAprobacionesId === r.id_solicitud
+                                  }
+                                  onClick={() => abrirAprobaciones(r)}
+                                  sx={{ color: "#1976D2" }}
+                                  aria-label="Ver detalle de la solicitud"
+                                >
+                                  {dialogAprobacionesLoading &&
+                                  dialogAprobacionesId === r.id_solicitud ? (
+                                    <CircularProgress
+                                      size={22}
+                                      thickness={5}
+                                      sx={{ color: "#1976D2" }}
+                                    />
+                                  ) : (
+                                    <Visibility sx={{ fontSize: 22 }} />
+                                  )}
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                            {!misSolicitudes && (
+                              <>
+                                <Tooltip
+                                  title={
+                                    r.estado !== "pendiente"
+                                      ? "Solo aplica a solicitudes pendientes"
+                                      : !puedeAprobar
+                                        ? "No tiene permiso para aprobar esta solicitud"
+                                        : sinEmpEnSesion
+                                          ? "Inicie sesión de nuevo"
+                                          : "Aprobar solicitud"
+                                  }
+                                >
+                                  <span>
+                                    <IconButton
+                                      size="small"
+                                      disabled={
+                                        r.estado !== "pendiente" ||
+                                        actionId !== null ||
+                                        !puedeAprobar ||
+                                        sinEmpEnSesion
+                                      }
+                                      onClick={() =>
+                                        abrirModalResolver(
+                                          r.id_solicitud,
+                                          "aprobar",
+                                        )
+                                      }
+                                      sx={{
+                                        color: "#2E7D32",
+                                        "&.Mui-disabled": {
+                                          color: "rgba(46, 125, 50, 0.28)",
+                                        },
+                                      }}
+                                      aria-label="Aprobar solicitud"
+                                    >
+                                      {actionId === r.id_solicitud ? (
+                                        <CircularProgress
+                                          size={22}
+                                          thickness={5}
+                                          sx={{ color: "#2E7D32" }}
+                                        />
+                                      ) : (
+                                        <Check sx={{ fontSize: 24 }} />
+                                      )}
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                                <Tooltip
+                                  title={
+                                    r.estado !== "pendiente"
+                                      ? "Solo aplica a solicitudes pendientes"
+                                      : !puedeRechazar
+                                        ? "No tiene permiso para rechazar esta solicitud"
+                                        : sinEmpEnSesion
+                                          ? "Inicie sesión de nuevo"
+                                          : "Rechazar solicitud"
+                                  }
+                                >
+                                  <span>
+                                    <IconButton
+                                      size="small"
+                                      disabled={
+                                        r.estado !== "pendiente" ||
+                                        actionId !== null ||
+                                        !puedeRechazar ||
+                                        sinEmpEnSesion
+                                      }
+                                      onClick={() =>
+                                        abrirModalResolver(
+                                          r.id_solicitud,
+                                          "rechazar",
+                                        )
+                                      }
+                                      sx={{
+                                        color: "#D32F2F",
+                                        "&.Mui-disabled": {
+                                          color: "rgba(211, 47, 47, 0.28)",
+                                        },
+                                      }}
+                                      aria-label="Rechazar solicitud"
+                                    >
+                                      <Close sx={{ fontSize: 24 }} />
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                              </>
+                            )}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
                     );
                   })
                 )}
@@ -806,88 +819,89 @@ function Solicitudes({ misSolicitudes = false }) {
       </Paper>
 
       {!misSolicitudes && (
-      <Dialog
-        open={resolverModalOpen}
-        onClose={cerrarModalResolver}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            border: "1px solid rgba(25, 118, 210, 0.16)",
-            borderRadius: 2,
-          },
-        }}
-      >
-        <DialogTitle sx={{ color: "#1976D2", fontWeight: 700 }}>
-          {resolverModalAccion === "rechazar"
-            ? "Rechazar solicitud"
-            : "Aprobar solicitud"}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Typography
-            variant="body2"
-            sx={{ color: "rgba(33, 33, 33, 0.88)", mb: 2 }}
-          >
-            Describa el motivo de su decisión. El comentario quedará registrado en
-            la base de datos.
-          </Typography>
-          <TextField
-            autoFocus
-            fullWidth
-            multiline
-            minRows={4}
-            label="Comentario"
-            placeholder="Ej. Documentación incompleta / Conforme con el cambio propuesto…"
-            value={resolverComentario}
-            onChange={(e) => {
-              setResolverComentario(e.target.value);
-              if (resolverComentarioError) setResolverComentarioError("");
-            }}
-            error={Boolean(resolverComentarioError)}
-            helperText={
-              resolverComentarioError ||
-              `Obligatorio. Máximo 2000 caracteres (${resolverComentario.length}/2000).`
-            }
-            inputProps={{ maxLength: 2000 }}
-            sx={{
-              "& .MuiOutlinedInput-root": { color: "#212121" },
-              "& .MuiInputLabel-root": { color: "#757575" },
-            }}
-          />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            onClick={cerrarModalResolver}
-            disabled={actionId !== null}
-            sx={{ color: "#757575", textTransform: "none" }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            variant="contained"
-            onClick={confirmarModalResolver}
-            disabled={actionId !== null}
-            sx={{
-              bgcolor:
-                resolverModalAccion === "rechazar" ? "#fef2f2" : "#E3F2FD",
-              color: resolverModalAccion === "rechazar" ? "#b91c1c" : "#1976D2",
-              border:
-                resolverModalAccion === "rechazar"
-                  ? "1px solid #fecaca"
-                  : "1px solid #1976D2",
-              textTransform: "none",
-              "&:hover": {
-                bgcolor:
-                  resolverModalAccion === "rechazar" ? "#fee2e2" : "#BBDEFB",
-              },
-            }}
-          >
+        <Dialog
+          open={resolverModalOpen}
+          onClose={cerrarModalResolver}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              border: "1px solid rgba(25, 118, 210, 0.16)",
+              borderRadius: 2,
+            },
+          }}
+        >
+          <DialogTitle sx={{ color: "#1976D2", fontWeight: 700 }}>
             {resolverModalAccion === "rechazar"
-              ? "Confirmar rechazo"
-              : "Confirmar aprobación"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+              ? "Rechazar solicitud"
+              : "Aprobar solicitud"}
+          </DialogTitle>
+          <DialogContent dividers>
+            <Typography
+              variant="body2"
+              sx={{ color: "rgba(33, 33, 33, 0.88)", mb: 2 }}
+            >
+              Describa el motivo de su decisión. El comentario quedará
+              registrado en la base de datos.
+            </Typography>
+            <TextField
+              autoFocus
+              fullWidth
+              multiline
+              minRows={4}
+              label="Comentario"
+              placeholder="Ej. Documentación incompleta / Conforme con el cambio propuesto…"
+              value={resolverComentario}
+              onChange={(e) => {
+                setResolverComentario(e.target.value);
+                if (resolverComentarioError) setResolverComentarioError("");
+              }}
+              error={Boolean(resolverComentarioError)}
+              helperText={
+                resolverComentarioError ||
+                `Obligatorio. Máximo 2000 caracteres (${resolverComentario.length}/2000).`
+              }
+              inputProps={{ maxLength: 2000 }}
+              sx={{
+                "& .MuiOutlinedInput-root": { color: "#212121" },
+                "& .MuiInputLabel-root": { color: "#757575" },
+              }}
+            />
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button
+              onClick={cerrarModalResolver}
+              disabled={actionId !== null}
+              sx={{ color: "#757575", textTransform: "none" }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="contained"
+              onClick={confirmarModalResolver}
+              disabled={actionId !== null}
+              sx={{
+                bgcolor:
+                  resolverModalAccion === "rechazar" ? "#fef2f2" : "#E3F2FD",
+                color:
+                  resolverModalAccion === "rechazar" ? "#b91c1c" : "#1976D2",
+                border:
+                  resolverModalAccion === "rechazar"
+                    ? "1px solid #fecaca"
+                    : "1px solid #1976D2",
+                textTransform: "none",
+                "&:hover": {
+                  bgcolor:
+                    resolverModalAccion === "rechazar" ? "#fee2e2" : "#BBDEFB",
+                },
+              }}
+            >
+              {resolverModalAccion === "rechazar"
+                ? "Confirmar rechazo"
+                : "Confirmar aprobación"}
+            </Button>
+          </DialogActions>
+        </Dialog>
       )}
 
       <Dialog
@@ -944,6 +958,29 @@ function Solicitudes({ misSolicitudes = false }) {
                   archivos_json={dialogAprobacionesSolicitud.archivos_json}
                 />
               </Box>
+              {(dialogAprobacionesSolicitud.tiempo_retencion?.trim() ||
+                dialogAprobacionesSolicitud.ubicacion_registro?.trim()) && (
+                <Box>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ color: "#757575", fontWeight: 600, mb: 0.5 }}
+                  >
+                    Retención y registro
+                  </Typography>
+                  {dialogAprobacionesSolicitud.tiempo_retencion?.trim() ? (
+                    <Typography variant="body2" sx={{ color: "#212121" }}>
+                      Tiempo de retención:{" "}
+                      {dialogAprobacionesSolicitud.tiempo_retencion}
+                    </Typography>
+                  ) : null}
+                  {dialogAprobacionesSolicitud.ubicacion_registro?.trim() ? (
+                    <Typography variant="body2" sx={{ color: "#212121" }}>
+                      Ubicación del registro:{" "}
+                      {dialogAprobacionesSolicitud.ubicacion_registro}
+                    </Typography>
+                  ) : null}
+                </Box>
+              )}
             </Stack>
           )}
           {dialogAprobacionesSolicitud && <Divider sx={{ my: 2 }} />}
@@ -972,6 +1009,9 @@ function Solicitudes({ misSolicitudes = false }) {
                       ID
                     </TableCell>
                     <TableCell sx={{ fontWeight: 600, color: "#757575" }}>
+                      Tipo
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: "#757575" }}>
                       Empleado
                     </TableCell>
                     <TableCell sx={{ fontWeight: 600, color: "#757575" }}>
@@ -992,11 +1032,18 @@ function Solicitudes({ misSolicitudes = false }) {
                   {dialogAprobacionesRows.map((a) => (
                     <TableRow key={a.id}>
                       <TableCell sx={{ color: "#1976D2" }}>{a.id}</TableCell>
-                      <TableCell sx={{ color: "#1976D2" }}>{a.emp_id}</TableCell>
+                      <TableCell sx={{ color: "#616161" }}>
+                        {labelTipoAprobador(a.tipo_aprobador)}
+                      </TableCell>
+                      <TableCell sx={{ color: "#1976D2" }}>
+                        {a.emp_id}
+                      </TableCell>
                       <TableCell sx={{ color: "#616161" }}>
                         {a.emp_nombre || "—"}
                       </TableCell>
-                      <TableCell sx={{ color: "#616161", wordBreak: "break-all" }}>
+                      <TableCell
+                        sx={{ color: "#616161", wordBreak: "break-all" }}
+                      >
                         {a.emp_correo || "—"}
                       </TableCell>
                       <TableCell>

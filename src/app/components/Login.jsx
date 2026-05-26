@@ -25,6 +25,10 @@ import {
 } from "@mui/icons-material";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import {
+  getSessionExpiresAt,
+  setSessionCookieClient,
+} from "@/libs/auth_session";
 
 function Login() {
   const router = useRouter();
@@ -99,17 +103,23 @@ function Login() {
               data.isAdmin === 1;
             localStorage.setItem("isAdmin", adminFlag ? "true" : "false");
             localStorage.setItem("usuario", user.user.trim());
-            // Crear cookie de sesión válida por 5 minutos y guardar el timestamp de expiración
             try {
-              const expiresAt = Date.now() + 5 * 60 * 1000;
+              const expiresAt = getSessionExpiresAt();
               localStorage.setItem("sessionExpiresAt", expiresAt.toString());
-              const expires = new Date(expiresAt).toUTCString();
-              document.cookie = `pdc_session=authenticated; expires=${expires}; path=/; SameSite=Lax`;
+              setSessionCookieClient(expiresAt);
             } catch (err) {
               console.error("No se pudo crear la cookie de sesión:", err);
             }
             setTimeout(() => {
-              router.push("/dashboard");
+              const params = new URLSearchParams(window.location.search);
+              const redirect = params.get("redirect");
+              const dest =
+                redirect &&
+                redirect.startsWith("/dashboard") &&
+                !redirect.startsWith("//")
+                  ? redirect
+                  : "/dashboard";
+              router.push(dest);
             }, 500);
           } else {
             // Si no se encontró el empleado, bloquear el login

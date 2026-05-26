@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { conn } from "@/libs/system_v_docs";
 import { getNextIdDocumento } from "@/libs/next_id_documento";
 import { resolveIdAreaRequerido } from "@/libs/id_area";
+import { optionalVarchar200 } from "@/libs/optional_varchar200";
 import fs from "fs";
 import path from "path";
 
@@ -122,6 +123,12 @@ export async function POST(request) {
     const nomenclatura = formData.get("nomenclatura");
     const nombre_documento = formData.get("nombre_documento");
     const id_area_raw = formData.get("id_area");
+    const tiempo_retencion = optionalVarchar200(
+      formData.get("tiempo_retencion"),
+    );
+    const ubicacion_registro = optionalVarchar200(
+      formData.get("ubicacion_registro"),
+    );
     const archivos = formData.getAll("archivos");
 
     if (!fecha_alta || !nomenclatura || !nombre_documento) {
@@ -170,8 +177,9 @@ export async function POST(request) {
     await conn.query(
       `INSERT INTO documentos
        (id_documento, fecha_alta, nomenclatura, nombre_documento, id_area,
-        ruta_carpeta, fecha_creacion, fecha_actualizacion, estado)
-       VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW(), ?)`,
+        ruta_carpeta, fecha_creacion, fecha_actualizacion, estado,
+        tiempo_retencion, ubicacion_registro)
+       VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, ?)`,
       [
         id_documento,
         fecha_alta,
@@ -180,6 +188,8 @@ export async function POST(request) {
         id_area,
         `/uploads/documentos/${id_documento}`,
         estadoAlta,
+        tiempo_retencion,
+        ubicacion_registro,
       ],
     );
 

@@ -64,6 +64,8 @@ function SolicitudCambioDocumento({ onVolver }) {
   const [resultados, setResultados] = useState([]);
   const [documentoSeleccionado, setDocumentoSeleccionado] = useState(null);
   const [motivo, setMotivo] = useState("");
+  const [tiempo_retencion, setTiempoRetencion] = useState("");
+  const [ubicacion_registro, setUbicacionRegistro] = useState("");
   const [formData, setFormData] = useState({
     archivos: [],
   });
@@ -124,6 +126,8 @@ function SolicitudCambioDocumento({ onVolver }) {
     setErrorBusqueda("");
     setResultados([]);
     setDocumentoSeleccionado(null);
+    setTiempoRetencion("");
+    setUbicacionRegistro("");
     try {
       const response = await fetch(
         `/api/documentos?nomenclatura=${encodeURIComponent(q)}`,
@@ -139,6 +143,8 @@ function SolicitudCambioDocumento({ onVolver }) {
         setErrorBusqueda("No se encontraron documentos con esa nomenclatura");
       } else if (list.length === 1) {
         setDocumentoSeleccionado(list[0]);
+        setTiempoRetencion(String(list[0].tiempo_retencion ?? ""));
+        setUbicacionRegistro(String(list[0].ubicacion_registro ?? ""));
       }
     } catch (e) {
       setErrorBusqueda("Error de conexión al buscar documentos");
@@ -250,10 +256,12 @@ function SolicitudCambioDocumento({ onVolver }) {
       fd.append("id_documento", documentoSeleccionado.id_documento);
       fd.append("id_area", documentoSeleccionado.id_area || "");
       fd.append("nomenclatura", documentoSeleccionado.nomenclatura || "");
-      fd.append("nombre_documento", documentoSeleccionado.nombre_documento || "");
+      fd.append(
+        "nombre_documento",
+        documentoSeleccionado.nombre_documento || "",
+      );
       fd.append("motivo", motivo);
-      const { emp_id_solicitante, solicitante } =
-        getSolicitanteParaSolicitud();
+      const { emp_id_solicitante, solicitante } = getSolicitanteParaSolicitud();
       if (!emp_id_solicitante?.trim() || !solicitante?.trim()) {
         setSubmitError(
           "No hay emp_id o emp_nombre del solicitante en la sesión (infoUser). Inicie sesión de nuevo.",
@@ -263,6 +271,8 @@ function SolicitudCambioDocumento({ onVolver }) {
       }
       fd.append("emp_id_solicitante", emp_id_solicitante.trim());
       fd.append("solicitante", solicitante.trim());
+      fd.append("tiempo_retencion", tiempo_retencion);
+      fd.append("ubicacion_registro", ubicacion_registro);
       formData.archivos.forEach((f) => fd.append("archivos", f));
 
       const response = await fetch("/api/solicitudes", {
@@ -277,6 +287,8 @@ function SolicitudCambioDocumento({ onVolver }) {
       setSubmitSuccess(true);
       setTimeout(() => {
         setMotivo("");
+        setTiempoRetencion("");
+        setUbicacionRegistro("");
         setDocumentoSeleccionado(null);
         setResultados([]);
         setBusqueda("");
@@ -303,7 +315,9 @@ function SolicitudCambioDocumento({ onVolver }) {
                   label="Buscar por nomenclatura"
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleBuscarDocumentos()}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && handleBuscarDocumentos()
+                  }
                   placeholder="Ej. código o parte del código"
                   sx={{ flex: 1, minWidth: 200, ...textFieldSx }}
                 />
@@ -358,7 +372,13 @@ function SolicitudCambioDocumento({ onVolver }) {
                       selected={
                         documentoSeleccionado?.id_documento === doc.id_documento
                       }
-                      onClick={() => setDocumentoSeleccionado(doc)}
+                      onClick={() => {
+                        setDocumentoSeleccionado(doc);
+                        setTiempoRetencion(String(doc.tiempo_retencion ?? ""));
+                        setUbicacionRegistro(
+                          String(doc.ubicacion_registro ?? ""),
+                        );
+                      }}
                     >
                       <ListItemText
                         primary={doc.nombre_documento}
@@ -380,28 +400,60 @@ function SolicitudCambioDocumento({ onVolver }) {
                   }}
                 >
                   <CardContent>
-                    <Typography sx={{ color: "#616161", fontWeight: 600, mb: 1 }}>
+                    <Typography
+                      sx={{ color: "#616161", fontWeight: 600, mb: 1 }}
+                    >
                       Documento seleccionado
                     </Typography>
                     <Typography sx={{ color: "#1976D2" }}>
                       {documentoSeleccionado.nombre_documento}
                     </Typography>
-                    <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mt: 1 }}>
+                    <Box
+                      sx={{ display: "flex", gap: 1, flexWrap: "wrap", mt: 1 }}
+                    >
                       <Chip
                         size="small"
                         label={documentoSeleccionado.nomenclatura}
-                        sx={{ bgcolor: "rgba(25, 118, 210, 0.14)", color: "#BBDEFB" }}
+                        sx={{
+                          bgcolor: "rgba(25, 118, 210, 0.14)",
+                          color: "#BBDEFB",
+                        }}
                       />
                       <Chip
                         size="small"
                         label={documentoSeleccionado.id_documento}
-                        sx={{ bgcolor: "rgba(25, 118, 210, 0.14)", color: "#1976D2" }}
+                        sx={{
+                          bgcolor: "rgba(25, 118, 210, 0.14)",
+                          color: "#1976D2",
+                        }}
                       />
                     </Box>
                   </CardContent>
                 </Card>
               </Grid>
             )}
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Tiempo de retención"
+                value={tiempo_retencion}
+                onChange={(e) => setTiempoRetencion(e.target.value)}
+                inputProps={{ maxLength: 200 }}
+                helperText="Si informa valores, al aprobar el cambio se actualizarán en el catálogo (opcional)"
+                sx={{ ...textFieldSx }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Ubicación del registro"
+                value={ubicacion_registro}
+                onChange={(e) => setUbicacionRegistro(e.target.value)}
+                inputProps={{ maxLength: 200 }}
+                helperText="Opcional · máx. 200 caracteres"
+                sx={{ ...textFieldSx }}
+              />
+            </Grid>
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -523,7 +575,13 @@ function SolicitudCambioDocumento({ onVolver }) {
                             justifyContent: "space-between",
                           }}
                         >
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
                             {getFileIcon(file)}
                             <Box>
                               <Typography
@@ -538,7 +596,10 @@ function SolicitudCambioDocumento({ onVolver }) {
                               >
                                 {file.name}
                               </Typography>
-                              <Typography variant="caption" sx={{ color: "#757575" }}>
+                              <Typography
+                                variant="caption"
+                                sx={{ color: "#757575" }}
+                              >
                                 {(file.size / 1024).toFixed(2)} KB
                               </Typography>
                             </Box>
@@ -777,9 +838,9 @@ function CrearSolicitud() {
                       </Typography>
                     </Box>
                     <Typography variant="body2" sx={{ color: "#757575" }}>
-                      Busque por nomenclatura y registre el cambio como solicitud.
-                      Tras la aprobación, los archivos se incorporan al documento
-                      existente en el catálogo.
+                      Busque por nomenclatura y registre el cambio como
+                      solicitud. Tras la aprobación, los archivos se incorporan
+                      al documento existente en el catálogo.
                     </Typography>
                   </CardContent>
                 </Card>
@@ -827,9 +888,9 @@ function CrearSolicitud() {
                       </Typography>
                     </Box>
                     <Typography variant="body2" sx={{ color: "#757575" }}>
-                      Información básica, nomenclatura, archivos y aprobadores. Se
-                      guarda en la tabla de solicitudes hasta que un administrador
-                      apruebe y el documento pase al catálogo oficial.
+                      Ingrese la información básica y adjunte los archivos. Su
+                      solicitud se guardará en la tabla de documentos hasta que
+                      sea aprobada por todos los aprobadores correspondientes.
                     </Typography>
                   </CardContent>
                 </Card>
@@ -858,7 +919,9 @@ function CrearSolicitud() {
           </Box>
         )}
 
-        {opcion === "cambio" && <SolicitudCambioDocumento onVolver={() => setOpcion(null)} />}
+        {opcion === "cambio" && (
+          <SolicitudCambioDocumento onVolver={() => setOpcion(null)} />
+        )}
       </Box>
     </HexagonMenu>
   );

@@ -14,6 +14,7 @@ import {
   ListItemText,
   Divider,
   Collapse,
+  CircularProgress,
 } from "@mui/material";
 import {
   Home,
@@ -24,38 +25,20 @@ import {
   ExpandMore,
   Add,
   Visibility,
+  TableChart,
   Create,
   List as ListIcon,
   Person,
   Logout,
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
+import {
+  clearAuthStorageClient,
+  isAuthenticatedClient,
+  syncSessionCookieFromStorage,
+} from "@/libs/auth_session";
 
 const drawerWidth = 240;
-
-const AUTH_STORAGE_KEYS = [
-  "infoUser",
-  "user",
-  "isAuthenticated",
-  "isAdmin",
-  "usuario",
-  "sessionExpiresAt",
-];
-
-function clearAuthClientStorage() {
-  AUTH_STORAGE_KEYS.forEach((key) => {
-    try {
-      localStorage.removeItem(key);
-    } catch {
-      /* ignore */
-    }
-  });
-  try {
-    sessionStorage.clear();
-  } catch {
-    /* ignore */
-  }
-}
 
 function buildMenuItems(isAdmin) {
   const all = [
@@ -84,6 +67,12 @@ function buildMenuItems(isAdmin) {
           title: "Visualizar Documentos",
           icon: Visibility,
           route: "/dashboard/documentos",
+        },
+        {
+          id: "matriz-registros",
+          title: "Matriz de registros",
+          icon: TableChart,
+          route: "/dashboard/matriz-registros",
         },
       ],
     },
@@ -140,7 +129,7 @@ function buildMenuItems(isAdmin) {
 
 function HexagonMenu({ selectedItemId, children }) {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
+  const [authorized, setAuthorized] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [expandedItems, setExpandedItems] = useState({
     documentos: false,
@@ -150,11 +139,19 @@ function HexagonMenu({ selectedItemId, children }) {
   const menuItems = useMemo(() => buildMenuItems(isAdmin), [isAdmin]);
 
   useEffect(() => {
-    setMounted(true);
+    syncSessionCookieFromStorage();
+
+    if (!isAuthenticatedClient()) {
+      router.replace("/");
+      return;
+    }
+
+    setAuthorized(true);
     setIsAdmin(localStorage.getItem("isAdmin") === "true");
     if (
       selectedItemId === "nuevo-documento" ||
-      selectedItemId === "visualizar-documentos"
+      selectedItemId === "visualizar-documentos" ||
+      selectedItemId === "matriz-registros"
     ) {
       setExpandedItems((prev) => ({ ...prev, documentos: true }));
     }
@@ -165,7 +162,7 @@ function HexagonMenu({ selectedItemId, children }) {
     ) {
       setExpandedItems((prev) => ({ ...prev, solicitudes: true }));
     }
-  }, [selectedItemId]);
+  }, [selectedItemId, router]);
 
   const handleItemClick = (item) => {
     if (item.hasSubmenu) {
@@ -191,7 +188,7 @@ function HexagonMenu({ selectedItemId, children }) {
   };
 
   const handleLogout = () => {
-    clearAuthClientStorage();
+    clearAuthStorageClient();
     router.push("/");
   };
 
@@ -203,8 +200,20 @@ function HexagonMenu({ selectedItemId, children }) {
     return submenuItems.some((subItem) => subItem.id === selectedItemId);
   };
 
-  if (!mounted) {
-    return null;
+  if (!authorized) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+          backgroundColor: "#F8F9FA",
+        }}
+      >
+        <CircularProgress sx={{ color: "#1976D2" }} />
+      </Box>
+    );
   }
 
   return (

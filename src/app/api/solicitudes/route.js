@@ -4,6 +4,11 @@ import { empleados } from "@/libs/empleados";
 import { getNextIdDocumento } from "@/libs/next_id_documento";
 import { resolveIdAreaRequerido } from "@/libs/id_area";
 import { crearAprobacionesSolicitud } from "@/libs/aprobaciones";
+import { optionalVarchar200 } from "@/libs/optional_varchar200";
+import {
+  notificarJefeDirectoSolicitudCreada,
+  resolveAppBaseUrl,
+} from "@/libs/notificar_aprobadores_solicitud";
 import fs from "fs";
 import path from "path";
 
@@ -61,10 +66,19 @@ export async function GET(request) {
       try {
         const placeholders = pendienteIds.map(() => "?").join(",");
         const [apRows] = await conn.query(
-          `SELECT DISTINCT id_solicitud FROM aprobaciones
-           WHERE id_solicitud IN (${placeholders})
-             AND TRIM(emp_id) = ?
-             AND status = 'pendiente'`,
+          `SELECT DISTINCT a.id_solicitud FROM aprobaciones a
+           WHERE a.id_solicitud IN (${placeholders})
+             AND TRIM(a.emp_id) = ?
+             AND a.status = 'pendiente'
+             AND (
+               IFNULL(a.tipo_aprobador, '') NOT IN ('responsable_area', 'forzado')
+               OR EXISTS (
+                 SELECT 1 FROM aprobaciones j
+                 WHERE j.id_solicitud = a.id_solicitud
+                   AND j.tipo_aprobador = 'jefe_directo'
+                   AND j.status = 'aprobado'
+               )
+             )`,
           [...pendienteIds, forEmpId],
         );
         for (const row of apRows) {
@@ -150,11 +164,18 @@ export async function POST(request) {
         `Alta de nuevo documento: ${nombre_documento}`,
       );
 
+      const tiempo_retencion = optionalVarchar200(
+        formData.get("tiempo_retencion"),
+      );
+      const ubicacion_registro = optionalVarchar200(
+        formData.get("ubicacion_registro"),
+      );
+
       const [ins] = await conn.query(
         `INSERT INTO solicitudes
         (tipo, estado, id_documento, fecha_alta, emp_id_solicitante, solicitante,
-         nomenclatura, nombre_documento, id_area, motivo, status)
-        VALUES ('nuevo', 'pendiente', ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente')`,
+         nomenclatura, nombre_documento, id_area, tiempo_retencion, ubicacion_registro, motivo)
+        VALUES ('nuevo', 'pendiente', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id_documento,
           fecha_alta,
@@ -163,6 +184,8 @@ export async function POST(request) {
           nomenclatura,
           nombre_documento,
           id_area,
+          tiempo_retencion,
+          ubicacion_registro,
           motivoNorm,
         ],
       );
@@ -225,10 +248,25 @@ export async function POST(request) {
         );
       }
 
+      let notificacionCorreo = null;
+      try {
+        notificacionCorreo = await notificarJefeDirectoSolicitudCreada(
+          conn,
+          id_solicitud,
+          { appBaseUrl: resolveAppBaseUrl(request) },
+        );
+      } catch (mailErr) {
+        console.error(
+          "Error al notificar al jefe directo (solicitud nuevo):",
+          mailErr,
+        );
+      }
+
       return NextResponse.json({
         success: true,
         message: "Solicitud registrada. Pendiente de aprobación.",
         data: { id_solicitud, id_documento },
+        notificacion_correo: notificacionCorreo,
       });
     }
 
@@ -258,11 +296,18 @@ export async function POST(request) {
 
       const motivoNorm = normalizeMotivoSolicitud(motivo);
 
+      const tiempo_retencion = optionalVarchar200(
+        formData.get("tiempo_retencion"),
+      );
+      const ubicacion_registro = optionalVarchar200(
+        formData.get("ubicacion_registro"),
+      );
+
       const [ins] = await conn.query(
         `INSERT INTO solicitudes
         (tipo, estado, id_documento, fecha_alta, emp_id_solicitante, solicitante,
-         nomenclatura, nombre_documento, id_area, motivo, status)
-        VALUES ('cambio', 'pendiente', ?, CURDATE(), ?, ?, ?, ?, ?, ?, 'pendiente')`,
+         nomenclatura, nombre_documento, id_area, tiempo_retencion, ubicacion_registro, motivo)
+        VALUES ('cambio', 'pendiente', ?, CURDATE(), ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id_documento,
           emp_id_solicitante,
@@ -270,6 +315,8 @@ export async function POST(request) {
           nomenclatura || null,
           nombre_documento || null,
           id_area_raw || null,
+          tiempo_retencion,
+          ubicacion_registro,
           motivoNorm,
         ],
       );
@@ -332,10 +379,25 @@ export async function POST(request) {
         );
       }
 
+      let notificacionCorreo = null;
+      try {
+        notificacionCorreo = await notificarJefeDirectoSolicitudCreada(
+          conn,
+          id_solicitud,
+          { appBaseUrl: resolveAppBaseUrl(request) },
+        );
+      } catch (mailErr) {
+        console.error(
+          "Error al notificar al jefe directo (solicitud cambio):",
+          mailErr,
+        );
+      }
+
       return NextResponse.json({
         success: true,
         message: "Solicitud de cambio registrada. Pendiente de aprobación.",
         data: { id_solicitud, id_documento },
+        notificacion_correo: notificacionCorreo,
       });
     }
 

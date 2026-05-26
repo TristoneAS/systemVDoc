@@ -181,7 +181,15 @@ function VisualizarDocumentos() {
       String(doc.area_nombre ?? "")
         .toLowerCase()
         .includes(searchLower) ||
-      String(doc.estado ?? "").toLowerCase().includes(searchLower)
+      String(doc.estado ?? "")
+        .toLowerCase()
+        .includes(searchLower) ||
+      String(doc.tiempo_retencion ?? "")
+        .toLowerCase()
+        .includes(searchLower) ||
+      String(doc.ubicacion_registro ?? "")
+        .toLowerCase()
+        .includes(searchLower)
     );
   });
 
@@ -588,6 +596,26 @@ function VisualizarDocumentos() {
                   </Typography>
                   <Typography variant="body1" sx={{ color: "#1976D2", mb: 2 }}>
                     {selectedDocumento.nombre_documento}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="caption" sx={{ color: "#757575" }}>
+                    Tiempo de retención
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: "#1976D2", mb: 2 }}>
+                    {selectedDocumento.tiempo_retencion?.trim()
+                      ? selectedDocumento.tiempo_retencion
+                      : "—"}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="caption" sx={{ color: "#757575" }}>
+                    Ubicación del registro
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: "#1976D2", mb: 2 }}>
+                    {selectedDocumento.ubicacion_registro?.trim()
+                      ? selectedDocumento.ubicacion_registro
+                      : "—"}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>

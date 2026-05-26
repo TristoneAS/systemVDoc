@@ -2,12 +2,21 @@ import { NextResponse } from "next/server";
 import { conn } from "@/libs/system_v_docs";
 import {
   normalizeEmpId,
-  actualizarStatusSolicitudPorAprobaciones,
+  actualizarEstadoSolicitudPorAprobaciones,
   STATUS_APROBACION_APROBADO,
   STATUS_APROBACION_RECHAZADO,
+  obtenerAprobacionPendienteDelActor,
+  requiereAprobacionJefePrevio,
+  existeJefeDirectoAprobado,
+  TIPO_APROBADOR_JEFE_DIRECTO,
 } from "@/libs/aprobaciones";
 import fs from "fs";
 import path from "path";
+import { optionalVarchar200 } from "@/libs/optional_varchar200";
+import {
+  notificarDemasAprobadoresTrasJefe,
+  resolveAppBaseUrl,
+} from "@/libs/notificar_aprobadores_solicitud";
 
 const UPLOAD_DOCS = path.join(process.cwd(), "public", "uploads", "documentos");
 
@@ -42,12 +51,14 @@ function normalizeComentarioDecision(raw) {
   const s = String(raw ?? "").trim();
   if (!s) {
     return {
-      error:
-        "Debe escribir un comentario con el motivo de su decisión.",
+      error: "Debe escribir un comentario con el motivo de su decisión.",
     };
   }
   return {
-    value: s.length > COMENTARIO_DECISION_MAX ? s.slice(0, COMENTARIO_DECISION_MAX) : s,
+    value:
+      s.length > COMENTARIO_DECISION_MAX
+        ? s.slice(0, COMENTARIO_DECISION_MAX)
+        : s,
   };
 }
 
@@ -121,14 +132,37 @@ export async function PATCH(request, { params }) {
           { status: 400 },
         );
       }
+      const filaPend = await obtenerAprobacionPendienteDelActor(
+        connection,
+        id_solicitud,
+        emp_id_actor,
+      );
+      if (!filaPend) {
+        await connection.rollback();
+        return NextResponse.json(
+          {
+            error:
+              "No tiene una aprobación pendiente para esta solicitud o ya registró su decisión.",
+          },
+          { status: 400 },
+        );
+      }
+      if (
+        requiereAprobacionJefePrevio(filaPend.tipo_aprobador) &&
+        !(await existeJefeDirectoAprobado(connection, id_solicitud))
+      ) {
+        await connection.rollback();
+        return NextResponse.json(
+          {
+            error:
+              "Aún no puede actuar: debe aprobar primero el jefe directo del solicitante.",
+          },
+          { status: 400 },
+        );
+      }
       const [rejResult] = await connection.query(
-        `UPDATE aprobaciones SET status = ?, comentario = ? WHERE id_solicitud = ? AND emp_id = ? AND status = 'pendiente'`,
-        [
-          STATUS_APROBACION_RECHAZADO,
-          comentario,
-          id_solicitud,
-          emp_id_actor,
-        ],
+        `UPDATE aprobaciones SET status = ?, comentario = ? WHERE id = ? AND status = 'pendiente'`,
+        [STATUS_APROBACION_RECHAZADO, comentario, filaPend.id],
       );
       if (!rejResult.affectedRows) {
         await connection.rollback();
@@ -141,7 +175,7 @@ export async function PATCH(request, { params }) {
         );
       }
       await connection.query(
-        `UPDATE solicitudes SET estado = 'rechazada', fecha_resolucion = NOW(), status = 'rechazada' WHERE id_solicitud = ?`,
+        `UPDATE solicitudes SET estado = 'rechazada', fecha_resolucion = NOW() WHERE id_solicitud = ?`,
         [id_solicitud],
       );
       await connection.commit();
@@ -159,14 +193,38 @@ export async function PATCH(request, { params }) {
       );
     }
 
+    const filaPend = await obtenerAprobacionPendienteDelActor(
+      connection,
+      id_solicitud,
+      emp_id_actor,
+    );
+    if (!filaPend) {
+      await connection.rollback();
+      return NextResponse.json(
+        {
+          error:
+            "No tiene una aprobación pendiente para esta solicitud o ya registró su visto bueno.",
+        },
+        { status: 400 },
+      );
+    }
+    if (
+      requiereAprobacionJefePrevio(filaPend.tipo_aprobador) &&
+      !(await existeJefeDirectoAprobado(connection, id_solicitud))
+    ) {
+      await connection.rollback();
+      return NextResponse.json(
+        {
+          error:
+            "Aún no puede actuar: debe aprobar primero el jefe directo del solicitante.",
+        },
+        { status: 400 },
+      );
+    }
+
     const [updResult] = await connection.query(
-      `UPDATE aprobaciones SET status = ?, comentario = ? WHERE id_solicitud = ? AND emp_id = ? AND status = 'pendiente'`,
-      [
-        STATUS_APROBACION_APROBADO,
-        comentario,
-        id_solicitud,
-        emp_id_actor,
-      ],
+      `UPDATE aprobaciones SET status = ?, comentario = ? WHERE id = ? AND status = 'pendiente'`,
+      [STATUS_APROBACION_APROBADO, comentario, filaPend.id],
     );
 
     if (!updResult.affectedRows) {
@@ -180,7 +238,7 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    await actualizarStatusSolicitudPorAprobaciones(connection, id_solicitud);
+    await actualizarEstadoSolicitudPorAprobaciones(connection, id_solicitud);
 
     const [solRefreshed] = await connection.query(
       `SELECT * FROM solicitudes WHERE id_solicitud = ?`,
@@ -188,11 +246,29 @@ export async function PATCH(request, { params }) {
     );
     sol = solRefreshed[0];
 
-    if (sol.status !== "aprobada") {
+    if (sol.estado !== "aprobada") {
       await connection.commit();
+
+      let notificacionCorreo = null;
+      if (filaPend.tipo_aprobador === TIPO_APROBADOR_JEFE_DIRECTO) {
+        try {
+          notificacionCorreo = await notificarDemasAprobadoresTrasJefe(
+            connection,
+            id_solicitud,
+            { appBaseUrl: resolveAppBaseUrl(request) },
+          );
+        } catch (mailErr) {
+          console.error(
+            "Error al notificar aprobadores tras jefe directo:",
+            mailErr,
+          );
+        }
+      }
+
       return NextResponse.json({
         success: true,
         message: "Visto bueno registrado. Quedan aprobaciones pendientes.",
+        notificacion_correo: notificacionCorreo,
       });
     }
 
@@ -243,11 +319,15 @@ export async function PATCH(request, { params }) {
         ]);
       }
 
+      const tiempoIns = optionalVarchar200(sol.tiempo_retencion);
+      const ubicIns = optionalVarchar200(sol.ubicacion_registro);
+
       await connection.query(
         `INSERT INTO documentos
         (id_documento, fecha_alta, nomenclatura, nombre_documento, id_area,
-         ruta_carpeta, fecha_creacion, fecha_actualizacion, estado)
-        VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW(), ?)`,
+         ruta_carpeta, fecha_creacion, fecha_actualizacion, estado,
+         tiempo_retencion, ubicacion_registro)
+        VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, ?)`,
         [
           sol.id_documento,
           sol.fecha_alta,
@@ -256,6 +336,8 @@ export async function PATCH(request, { params }) {
           sol.id_area ?? null,
           `/uploads/documentos/${sol.id_documento}`,
           "activo",
+          tiempoIns,
+          ubicIns,
         ],
       );
 
@@ -278,8 +360,23 @@ export async function PATCH(request, { params }) {
         );
       }
 
+      await connection.query(
+        `DELETE FROM archivos_documentos WHERE id_documento = ?`,
+        [sol.id_documento],
+      );
+
       const carpetaDestino = path.join(UPLOAD_DOCS, sol.id_documento);
       ensureDir(carpetaDestino);
+      if (fs.existsSync(carpetaDestino)) {
+        for (const name of fs.readdirSync(carpetaDestino)) {
+          const fp = path.join(carpetaDestino, name);
+          try {
+            if (fs.statSync(fp).isFile()) fs.unlinkSync(fp);
+          } catch {
+            /* ignore */
+          }
+        }
+      }
 
       const valoresArchivos = [];
       for (const a of archivosJson) {
@@ -307,6 +404,18 @@ export async function PATCH(request, { params }) {
         await connection.query(
           `INSERT INTO archivos_documentos (id_documento, nombre_archivo, ruta_archivo, tipo_archivo, tamano_archivo) VALUES ?`,
           [valoresArchivos],
+        );
+      }
+
+      const trCambio = optionalVarchar200(sol.tiempo_retencion);
+      const urCambio = optionalVarchar200(sol.ubicacion_registro);
+      if (trCambio !== null || urCambio !== null) {
+        await connection.query(
+          `UPDATE documentos SET
+            tiempo_retencion = COALESCE(?, tiempo_retencion),
+            ubicacion_registro = COALESCE(?, ubicacion_registro)
+           WHERE id_documento = ?`,
+          [trCambio, urCambio, sol.id_documento],
         );
       }
     }
