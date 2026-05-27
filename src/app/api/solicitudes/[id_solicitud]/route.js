@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { conn } from "@/libs/system_v_docs";
+import { empleados } from "@/libs/empleados";
 import {
   normalizeEmpId,
   actualizarEstadoSolicitudPorAprobaciones,
@@ -9,16 +10,44 @@ import {
   requiereAprobacionJefePrevio,
   existeJefeDirectoAprobado,
   TIPO_APROBADOR_JEFE_DIRECTO,
+  reiniciarAprobacionesSolicitud,
 } from "@/libs/aprobaciones";
 import fs from "fs";
 import path from "path";
 import { optionalVarchar200 } from "@/libs/optional_varchar200";
+import { resolveIdAreaRequerido } from "@/libs/id_area";
 import {
   notificarDemasAprobadoresTrasJefe,
+  notificarJefeDirectoSolicitudCreada,
   resolveAppBaseUrl,
 } from "@/libs/notificar_aprobadores_solicitud";
 
 const UPLOAD_DOCS = path.join(process.cwd(), "public", "uploads", "documentos");
+const UPLOAD_SOLICITUDES = path.join(
+  process.cwd(),
+  "public",
+  "uploads",
+  "solicitudes",
+);
+
+const MOTIVO_SOLICITUD_MAX = 300;
+
+function esEstadoRechazada(estado) {
+  const e = String(estado || "")
+    .toLowerCase()
+    .trim();
+  return e === "rechazada" || e === "rechazado";
+}
+
+function normalizeMotivoSolicitud(raw, fallbackSiVacio = "Sin descripción") {
+  let s = String(raw ?? "").trim();
+  if (!s) s = String(fallbackSiVacio ?? "").trim();
+  if (!s) s = "Sin descripción";
+  if (s.length > MOTIVO_SOLICITUD_MAX) {
+    s = s.slice(0, MOTIVO_SOLICITUD_MAX);
+  }
+  return s;
+}
 
 function ensureDir(dirPath) {
   if (!fs.existsSync(dirPath)) {
@@ -46,6 +75,7 @@ function normalizeArchivosJson(raw) {
 }
 
 const COMENTARIO_DECISION_MAX = 2000;
+const COMENTARIO_APROBACION_AUSENCIA = "aprobado por ausencia";
 
 function normalizeComentarioDecision(raw) {
   const s = String(raw ?? "").trim();
@@ -60,6 +90,220 @@ function normalizeComentarioDecision(raw) {
         ? s.slice(0, COMENTARIO_DECISION_MAX)
         : s,
   };
+}
+
+async function finalizarSolicitudAprobada(connection, sol, id_solicitud) {
+  const archivosJson = normalizeArchivosJson(sol.archivos_json);
+  if (archivosJson.length === 0) {
+    return {
+      error: "La solicitud no tiene archivos adjuntos",
+      status: 400,
+    };
+  }
+
+  if (sol.tipo === "nuevo") {
+    const [exists] = await connection.query(
+      `SELECT id_documento FROM documentos WHERE id_documento = ?`,
+      [sol.id_documento],
+    );
+    if (exists.length > 0) {
+      return { error: "Ya existe un documento con ese ID", status: 409 };
+    }
+
+    const carpetaDestino = path.join(UPLOAD_DOCS, sol.id_documento);
+    ensureDir(carpetaDestino);
+
+    const valoresArchivos = [];
+    for (const a of archivosJson) {
+      const src = publicPathFromUrl(a.ruta_archivo);
+      if (!fs.existsSync(src)) {
+        return {
+          error: `Archivo faltante en servidor: ${a.nombre_archivo}`,
+          status: 500,
+        };
+      }
+      const dest = path.join(carpetaDestino, a.nombre_archivo);
+      fs.copyFileSync(src, dest);
+      const rutaRel = `/uploads/documentos/${sol.id_documento}/${a.nombre_archivo}`;
+      valoresArchivos.push([
+        sol.id_documento,
+        a.nombre_archivo,
+        rutaRel,
+        a.tipo_archivo,
+        a.tamano_archivo,
+      ]);
+    }
+
+    const tiempoIns = optionalVarchar200(sol.tiempo_retencion);
+    const ubicIns = optionalVarchar200(sol.ubicacion_registro);
+
+    await connection.query(
+      `INSERT INTO documentos
+        (id_documento, fecha_alta, nomenclatura, nombre_documento, id_area,
+         ruta_carpeta, fecha_creacion, fecha_actualizacion, estado,
+         tiempo_retencion, ubicacion_registro)
+        VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, ?)`,
+      [
+        sol.id_documento,
+        sol.fecha_alta,
+        sol.nomenclatura,
+        sol.nombre_documento,
+        sol.id_area ?? null,
+        `/uploads/documentos/${sol.id_documento}`,
+        "activo",
+        tiempoIns,
+        ubicIns,
+      ],
+    );
+
+    if (valoresArchivos.length > 0) {
+      await connection.query(
+        `INSERT INTO archivos_documentos (id_documento, nombre_archivo, ruta_archivo, tipo_archivo, tamano_archivo) VALUES ?`,
+        [valoresArchivos],
+      );
+    }
+  } else if (sol.tipo === "cambio") {
+    const [docRow] = await connection.query(
+      `SELECT id_documento FROM documentos WHERE id_documento = ?`,
+      [sol.id_documento],
+    );
+    if (docRow.length === 0) {
+      return {
+        error: "El documento a modificar ya no existe en el sistema",
+        status: 400,
+      };
+    }
+
+    await connection.query(
+      `DELETE FROM archivos_documentos WHERE id_documento = ?`,
+      [sol.id_documento],
+    );
+
+    const carpetaDestino = path.join(UPLOAD_DOCS, sol.id_documento);
+    ensureDir(carpetaDestino);
+    if (fs.existsSync(carpetaDestino)) {
+      for (const name of fs.readdirSync(carpetaDestino)) {
+        const fp = path.join(carpetaDestino, name);
+        try {
+          if (fs.statSync(fp).isFile()) fs.unlinkSync(fp);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+
+    const valoresArchivos = [];
+    for (const a of archivosJson) {
+      const src = publicPathFromUrl(a.ruta_archivo);
+      if (!fs.existsSync(src)) {
+        return {
+          error: `Archivo faltante en servidor: ${a.nombre_archivo}`,
+          status: 500,
+        };
+      }
+      const dest = path.join(carpetaDestino, a.nombre_archivo);
+      fs.copyFileSync(src, dest);
+      const rutaRel = `/uploads/documentos/${sol.id_documento}/${a.nombre_archivo}`;
+      valoresArchivos.push([
+        sol.id_documento,
+        a.nombre_archivo,
+        rutaRel,
+        a.tipo_archivo,
+        a.tamano_archivo,
+      ]);
+    }
+
+    if (valoresArchivos.length > 0) {
+      await connection.query(
+        `INSERT INTO archivos_documentos (id_documento, nombre_archivo, ruta_archivo, tipo_archivo, tamano_archivo) VALUES ?`,
+        [valoresArchivos],
+      );
+    }
+
+    const trCambio = optionalVarchar200(sol.tiempo_retencion);
+    const urCambio = optionalVarchar200(sol.ubicacion_registro);
+    if (trCambio !== null || urCambio !== null) {
+      await connection.query(
+        `UPDATE documentos SET
+            tiempo_retencion = COALESCE(?, tiempo_retencion),
+            ubicacion_registro = COALESCE(?, ubicacion_registro)
+           WHERE id_documento = ?`,
+        [trCambio, urCambio, sol.id_documento],
+      );
+    }
+  }
+
+  await connection.query(
+    `UPDATE solicitudes SET estado = 'aprobada', fecha_resolucion = NOW() WHERE id_solicitud = ?`,
+    [id_solicitud],
+  );
+
+  return {
+    message:
+      sol.tipo === "nuevo"
+        ? "Solicitud aprobada: documento dado de alta"
+        : "Solicitud aprobada: archivos incorporados al documento",
+  };
+}
+
+async function procesarVistoBueno(
+  connection,
+  request,
+  id_solicitud,
+  filaPend,
+  comentario,
+) {
+  const [updResult] = await connection.query(
+    `UPDATE aprobaciones SET status = ?, comentario = ? WHERE id = ? AND status = 'pendiente'`,
+    [STATUS_APROBACION_APROBADO, comentario, filaPend.id],
+  );
+
+  if (!updResult.affectedRows) {
+    return {
+      error:
+        "No tiene una aprobación pendiente para esta solicitud o ya registró su visto bueno.",
+      status: 400,
+    };
+  }
+
+  await actualizarEstadoSolicitudPorAprobaciones(connection, id_solicitud);
+
+  const [solRefreshed] = await connection.query(
+    `SELECT * FROM solicitudes WHERE id_solicitud = ?`,
+    [id_solicitud],
+  );
+  const sol = solRefreshed[0];
+
+  if (sol.estado !== "aprobada") {
+    let notificacionCorreo = null;
+    if (filaPend.tipo_aprobador === TIPO_APROBADOR_JEFE_DIRECTO) {
+      try {
+        notificacionCorreo = await notificarDemasAprobadoresTrasJefe(
+          connection,
+          id_solicitud,
+          { appBaseUrl: resolveAppBaseUrl(request) },
+        );
+      } catch (mailErr) {
+        console.error(
+          "Error al notificar aprobadores tras jefe directo:",
+          mailErr,
+        );
+      }
+    }
+
+    return {
+      commit: true,
+      message: "Visto bueno registrado. Quedan aprobaciones pendientes.",
+      notificacion_correo: notificacionCorreo,
+    };
+  }
+
+  const fin = await finalizarSolicitudAprobada(connection, sol, id_solicitud);
+  if (fin.error) {
+    return { error: fin.error, status: fin.status, rollback: true };
+  }
+
+  return { commit: true, message: fin.message };
 }
 
 export async function PATCH(request, { params }) {
@@ -80,18 +324,30 @@ export async function PATCH(request, { params }) {
   }
 
   const accion = body.accion;
-  if (accion !== "aprobar" && accion !== "rechazar") {
+  const esAprobarAusencia = accion === "aprobar_ausencia";
+  if (accion !== "aprobar" && accion !== "rechazar" && !esAprobarAusencia) {
     return NextResponse.json(
-      { error: "accion debe ser aprobar o rechazar" },
+      { error: "accion debe ser aprobar, rechazar o aprobar_ausencia" },
       { status: 400 },
     );
   }
 
-  const comentarioRes = normalizeComentarioDecision(body.comentario);
-  if (comentarioRes.error) {
-    return NextResponse.json({ error: comentarioRes.error }, { status: 400 });
+  let comentario;
+  if (esAprobarAusencia) {
+    if (body.is_admin !== true) {
+      return NextResponse.json(
+        { error: "Solo un administrador puede aprobar por ausencia." },
+        { status: 403 },
+      );
+    }
+    comentario = COMENTARIO_APROBACION_AUSENCIA;
+  } else {
+    const comentarioRes = normalizeComentarioDecision(body.comentario);
+    if (comentarioRes.error) {
+      return NextResponse.json({ error: comentarioRes.error }, { status: 400 });
+    }
+    comentario = comentarioRes.value;
   }
-  const comentario = comentarioRes.value;
 
   const connection = await conn.getConnection();
   try {
@@ -193,21 +449,53 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    const filaPend = await obtenerAprobacionPendienteDelActor(
-      connection,
-      id_solicitud,
-      emp_id_actor,
-    );
-    if (!filaPend) {
-      await connection.rollback();
-      return NextResponse.json(
-        {
-          error:
-            "No tiene una aprobación pendiente para esta solicitud o ya registró su visto bueno.",
-        },
-        { status: 400 },
+    let filaPend;
+    if (esAprobarAusencia) {
+      const id_aprobacion = parseInt(body.id_aprobacion, 10);
+      if (Number.isNaN(id_aprobacion)) {
+        await connection.rollback();
+        return NextResponse.json(
+          { error: "id_aprobacion es requerido" },
+          { status: 400 },
+        );
+      }
+      const [apRows] = await connection.query(
+        `SELECT id, tipo_aprobador, status FROM aprobaciones
+         WHERE id = ? AND id_solicitud = ?`,
+        [id_aprobacion, id_solicitud],
       );
+      if (
+        apRows.length === 0 ||
+        String(apRows[0].status || "").toLowerCase() !== "pendiente"
+      ) {
+        await connection.rollback();
+        return NextResponse.json(
+          {
+            error:
+              "La aprobación indicada no existe o ya no está pendiente.",
+          },
+          { status: 400 },
+        );
+      }
+      filaPend = apRows[0];
+    } else {
+      filaPend = await obtenerAprobacionPendienteDelActor(
+        connection,
+        id_solicitud,
+        emp_id_actor,
+      );
+      if (!filaPend) {
+        await connection.rollback();
+        return NextResponse.json(
+          {
+            error:
+              "No tiene una aprobación pendiente para esta solicitud o ya registró su visto bueno.",
+          },
+          { status: 400 },
+        );
+      }
     }
+
     if (
       requiereAprobacionJefePrevio(filaPend.tipo_aprobador) &&
       !(await existeJefeDirectoAprobado(connection, id_solicitud))
@@ -222,216 +510,29 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    const [updResult] = await connection.query(
-      `UPDATE aprobaciones SET status = ?, comentario = ? WHERE id = ? AND status = 'pendiente'`,
-      [STATUS_APROBACION_APROBADO, comentario, filaPend.id],
+    const resultado = await procesarVistoBueno(
+      connection,
+      request,
+      id_solicitud,
+      filaPend,
+      comentario,
     );
 
-    if (!updResult.affectedRows) {
+    if (resultado.error) {
       await connection.rollback();
       return NextResponse.json(
-        {
-          error:
-            "No tiene una aprobación pendiente para esta solicitud o ya registró su visto bueno.",
-        },
-        { status: 400 },
+        { error: resultado.error },
+        { status: resultado.status || 400 },
       );
     }
-
-    await actualizarEstadoSolicitudPorAprobaciones(connection, id_solicitud);
-
-    const [solRefreshed] = await connection.query(
-      `SELECT * FROM solicitudes WHERE id_solicitud = ?`,
-      [id_solicitud],
-    );
-    sol = solRefreshed[0];
-
-    if (sol.estado !== "aprobada") {
-      await connection.commit();
-
-      let notificacionCorreo = null;
-      if (filaPend.tipo_aprobador === TIPO_APROBADOR_JEFE_DIRECTO) {
-        try {
-          notificacionCorreo = await notificarDemasAprobadoresTrasJefe(
-            connection,
-            id_solicitud,
-            { appBaseUrl: resolveAppBaseUrl(request) },
-          );
-        } catch (mailErr) {
-          console.error(
-            "Error al notificar aprobadores tras jefe directo:",
-            mailErr,
-          );
-        }
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: "Visto bueno registrado. Quedan aprobaciones pendientes.",
-        notificacion_correo: notificacionCorreo,
-      });
-    }
-
-    const archivosJson = normalizeArchivosJson(sol.archivos_json);
-    if (archivosJson.length === 0) {
-      await connection.rollback();
-      return NextResponse.json(
-        { error: "La solicitud no tiene archivos adjuntos" },
-        { status: 400 },
-      );
-    }
-
-    if (sol.tipo === "nuevo") {
-      const [exists] = await connection.query(
-        `SELECT id_documento FROM documentos WHERE id_documento = ?`,
-        [sol.id_documento],
-      );
-      if (exists.length > 0) {
-        await connection.rollback();
-        return NextResponse.json(
-          { error: "Ya existe un documento con ese ID" },
-          { status: 409 },
-        );
-      }
-
-      const carpetaDestino = path.join(UPLOAD_DOCS, sol.id_documento);
-      ensureDir(carpetaDestino);
-
-      const valoresArchivos = [];
-      for (const a of archivosJson) {
-        const src = publicPathFromUrl(a.ruta_archivo);
-        if (!fs.existsSync(src)) {
-          await connection.rollback();
-          return NextResponse.json(
-            { error: `Archivo faltante en servidor: ${a.nombre_archivo}` },
-            { status: 500 },
-          );
-        }
-        const dest = path.join(carpetaDestino, a.nombre_archivo);
-        fs.copyFileSync(src, dest);
-        const rutaRel = `/uploads/documentos/${sol.id_documento}/${a.nombre_archivo}`;
-        valoresArchivos.push([
-          sol.id_documento,
-          a.nombre_archivo,
-          rutaRel,
-          a.tipo_archivo,
-          a.tamano_archivo,
-        ]);
-      }
-
-      const tiempoIns = optionalVarchar200(sol.tiempo_retencion);
-      const ubicIns = optionalVarchar200(sol.ubicacion_registro);
-
-      await connection.query(
-        `INSERT INTO documentos
-        (id_documento, fecha_alta, nomenclatura, nombre_documento, id_area,
-         ruta_carpeta, fecha_creacion, fecha_actualizacion, estado,
-         tiempo_retencion, ubicacion_registro)
-        VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, ?)`,
-        [
-          sol.id_documento,
-          sol.fecha_alta,
-          sol.nomenclatura,
-          sol.nombre_documento,
-          sol.id_area ?? null,
-          `/uploads/documentos/${sol.id_documento}`,
-          "activo",
-          tiempoIns,
-          ubicIns,
-        ],
-      );
-
-      if (valoresArchivos.length > 0) {
-        await connection.query(
-          `INSERT INTO archivos_documentos (id_documento, nombre_archivo, ruta_archivo, tipo_archivo, tamano_archivo) VALUES ?`,
-          [valoresArchivos],
-        );
-      }
-    } else if (sol.tipo === "cambio") {
-      const [docRow] = await connection.query(
-        `SELECT id_documento FROM documentos WHERE id_documento = ?`,
-        [sol.id_documento],
-      );
-      if (docRow.length === 0) {
-        await connection.rollback();
-        return NextResponse.json(
-          { error: "El documento a modificar ya no existe en el sistema" },
-          { status: 400 },
-        );
-      }
-
-      await connection.query(
-        `DELETE FROM archivos_documentos WHERE id_documento = ?`,
-        [sol.id_documento],
-      );
-
-      const carpetaDestino = path.join(UPLOAD_DOCS, sol.id_documento);
-      ensureDir(carpetaDestino);
-      if (fs.existsSync(carpetaDestino)) {
-        for (const name of fs.readdirSync(carpetaDestino)) {
-          const fp = path.join(carpetaDestino, name);
-          try {
-            if (fs.statSync(fp).isFile()) fs.unlinkSync(fp);
-          } catch {
-            /* ignore */
-          }
-        }
-      }
-
-      const valoresArchivos = [];
-      for (const a of archivosJson) {
-        const src = publicPathFromUrl(a.ruta_archivo);
-        if (!fs.existsSync(src)) {
-          await connection.rollback();
-          return NextResponse.json(
-            { error: `Archivo faltante en servidor: ${a.nombre_archivo}` },
-            { status: 500 },
-          );
-        }
-        const dest = path.join(carpetaDestino, a.nombre_archivo);
-        fs.copyFileSync(src, dest);
-        const rutaRel = `/uploads/documentos/${sol.id_documento}/${a.nombre_archivo}`;
-        valoresArchivos.push([
-          sol.id_documento,
-          a.nombre_archivo,
-          rutaRel,
-          a.tipo_archivo,
-          a.tamano_archivo,
-        ]);
-      }
-
-      if (valoresArchivos.length > 0) {
-        await connection.query(
-          `INSERT INTO archivos_documentos (id_documento, nombre_archivo, ruta_archivo, tipo_archivo, tamano_archivo) VALUES ?`,
-          [valoresArchivos],
-        );
-      }
-
-      const trCambio = optionalVarchar200(sol.tiempo_retencion);
-      const urCambio = optionalVarchar200(sol.ubicacion_registro);
-      if (trCambio !== null || urCambio !== null) {
-        await connection.query(
-          `UPDATE documentos SET
-            tiempo_retencion = COALESCE(?, tiempo_retencion),
-            ubicacion_registro = COALESCE(?, ubicacion_registro)
-           WHERE id_documento = ?`,
-          [trCambio, urCambio, sol.id_documento],
-        );
-      }
-    }
-
-    await connection.query(
-      `UPDATE solicitudes SET estado = 'aprobada', fecha_resolucion = NOW() WHERE id_solicitud = ?`,
-      [id_solicitud],
-    );
 
     await connection.commit();
     return NextResponse.json({
       success: true,
-      message:
-        sol.tipo === "nuevo"
-          ? "Solicitud aprobada: documento dado de alta"
-          : "Solicitud aprobada: archivos incorporados al documento",
+      message: esAprobarAusencia
+        ? `Aprobación registrada por ausencia (${filaPend.id}). ${resultado.message}`
+        : resultado.message,
+      notificacion_correo: resultado.notificacion_correo ?? undefined,
     });
   } catch (error) {
     await connection.rollback();
@@ -439,6 +540,261 @@ export async function PATCH(request, { params }) {
     return NextResponse.json(
       {
         error: "Error al procesar la solicitud",
+        details: error.message,
+      },
+      { status: 500 },
+    );
+  } finally {
+    connection.release();
+  }
+}
+
+/**
+ * Reenvía una solicitud rechazada: actualiza datos/archivos, reinicia aprobaciones
+ * (jefe directo primero) y deja la solicitud en estado pendiente.
+ */
+export async function PUT(request, { params }) {
+  const resolved = await params;
+  const id_solicitud = parseInt(resolved.id_solicitud, 10);
+  if (Number.isNaN(id_solicitud)) {
+    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  }
+
+  let formData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return NextResponse.json(
+      { error: "Se esperaba FormData con los datos de la solicitud" },
+      { status: 400 },
+    );
+  }
+
+  const emp_id_actor = normalizeEmpId(formData.get("emp_id_actor"));
+  if (!emp_id_actor) {
+    return NextResponse.json(
+      { error: "emp_id_actor es requerido" },
+      { status: 400 },
+    );
+  }
+
+  const connection = await conn.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [rows] = await connection.query(
+      `SELECT * FROM solicitudes WHERE id_solicitud = ? FOR UPDATE`,
+      [id_solicitud],
+    );
+    if (rows.length === 0) {
+      await connection.rollback();
+      return NextResponse.json(
+        { error: "Solicitud no encontrada" },
+        { status: 404 },
+      );
+    }
+
+    const sol = rows[0];
+    if (!esEstadoRechazada(sol.estado)) {
+      await connection.rollback();
+      return NextResponse.json(
+        {
+          error:
+            "Solo puede editar y reenviar solicitudes en estado rechazado.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const empSolicitante = normalizeEmpId(sol.emp_id_solicitante);
+    if (!empSolicitante || empSolicitante !== emp_id_actor) {
+      await connection.rollback();
+      return NextResponse.json(
+        { error: "Solo el solicitante puede editar y reenviar esta solicitud." },
+        { status: 403 },
+      );
+    }
+
+    const archivosNuevos = formData
+      .getAll("archivos")
+      .filter((f) => f instanceof File && f.size > 0);
+    const tipoCarpeta = sol.tipo === "cambio" ? "cambio" : "nuevo";
+    const carpeta = path.join(
+      UPLOAD_SOLICITUDES,
+      tipoCarpeta,
+      String(id_solicitud),
+    );
+
+    let archivosGuardados = normalizeArchivosJson(sol.archivos_json);
+
+    if (archivosNuevos.length > 0) {
+      ensureDir(carpeta);
+      if (fs.existsSync(carpeta)) {
+        for (const name of fs.readdirSync(carpeta)) {
+          const fp = path.join(carpeta, name);
+          try {
+            if (fs.statSync(fp).isFile()) fs.unlinkSync(fp);
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+      archivosGuardados = [];
+      for (const archivo of archivosNuevos) {
+        const nombreArchivo = archivo.name;
+        const buffer = Buffer.from(await archivo.arrayBuffer());
+        fs.writeFileSync(path.join(carpeta, nombreArchivo), buffer);
+        archivosGuardados.push({
+          nombre_archivo: nombreArchivo,
+          ruta_archivo: `/uploads/solicitudes/${tipoCarpeta}/${id_solicitud}/${nombreArchivo}`,
+          tipo_archivo: archivo.type || path.extname(nombreArchivo),
+          tamano_archivo: archivo.size,
+        });
+      }
+    }
+
+    if (archivosGuardados.length === 0) {
+      await connection.rollback();
+      return NextResponse.json(
+        { error: "Debe adjuntar al menos un archivo" },
+        { status: 400 },
+      );
+    }
+
+    const ruta_carpeta = `/uploads/solicitudes/${tipoCarpeta}/${id_solicitud}`;
+    const tiempo_retencion = optionalVarchar200(
+      formData.get("tiempo_retencion"),
+    );
+    const ubicacion_registro = optionalVarchar200(
+      formData.get("ubicacion_registro"),
+    );
+
+    let id_area = sol.id_area;
+    let fecha_alta = sol.fecha_alta;
+    let nomenclatura = sol.nomenclatura;
+    let nombre_documento = sol.nombre_documento;
+    let motivo = sol.motivo;
+
+    if (sol.tipo === "nuevo") {
+      const fechaAltaRaw = formData.get("fecha_alta");
+      const nomenclaturaRaw = formData.get("nomenclatura");
+      const nombreDocRaw = formData.get("nombre_documento");
+      const idAreaRaw = formData.get("id_area");
+
+      if (!fechaAltaRaw || !nomenclaturaRaw || !nombreDocRaw) {
+        await connection.rollback();
+        return NextResponse.json(
+          {
+            error:
+              "fecha_alta, nomenclatura y nombre_documento son requeridos",
+          },
+          { status: 400 },
+        );
+      }
+
+      const areaRes = await resolveIdAreaRequerido(idAreaRaw ?? sol.id_area);
+      if (areaRes.error) {
+        await connection.rollback();
+        return NextResponse.json({ error: areaRes.error }, { status: 400 });
+      }
+      id_area = areaRes.id_area;
+      fecha_alta = fechaAltaRaw;
+      nomenclatura = String(nomenclaturaRaw).trim();
+      nombre_documento = String(nombreDocRaw).trim();
+      motivo = normalizeMotivoSolicitud(
+        formData.get("motivo"),
+        `Alta de nuevo documento: ${nombre_documento}`,
+      );
+    } else if (sol.tipo === "cambio") {
+      const motivoRaw = formData.get("motivo");
+      if (!String(motivoRaw || "").trim()) {
+        await connection.rollback();
+        return NextResponse.json(
+          { error: "El motivo del cambio es requerido" },
+          { status: 400 },
+        );
+      }
+      motivo = normalizeMotivoSolicitud(motivoRaw);
+    } else {
+      await connection.rollback();
+      return NextResponse.json(
+        { error: "Tipo de solicitud no válido" },
+        { status: 400 },
+      );
+    }
+
+    await connection.query(
+      `UPDATE solicitudes SET
+        estado = 'pendiente',
+        fecha_resolucion = NULL,
+        fecha_alta = ?,
+        nomenclatura = ?,
+        nombre_documento = ?,
+        id_area = ?,
+        tiempo_retencion = ?,
+        ubicacion_registro = ?,
+        motivo = ?,
+        ruta_carpeta = ?,
+        archivos_json = ?
+       WHERE id_solicitud = ?`,
+      [
+        fecha_alta,
+        nomenclatura,
+        nombre_documento,
+        id_area ?? null,
+        tiempo_retencion,
+        ubicacion_registro,
+        motivo,
+        ruta_carpeta,
+        JSON.stringify(archivosGuardados),
+        id_solicitud,
+      ],
+    );
+
+    try {
+      await reiniciarAprobacionesSolicitud(connection, empleados, {
+        solicitudId: id_solicitud,
+        empIdSolicitante: empSolicitante,
+        idArea: id_area,
+        idDocumento: sol.id_documento,
+      });
+    } catch (e) {
+      await connection.rollback();
+      return NextResponse.json(
+        { error: e.message || "Error al reiniciar aprobaciones" },
+        { status: 400 },
+      );
+    }
+
+    await connection.commit();
+
+    let notificacionCorreo = null;
+    try {
+      notificacionCorreo = await notificarJefeDirectoSolicitudCreada(
+        conn,
+        id_solicitud,
+        { appBaseUrl: resolveAppBaseUrl(request) },
+      );
+    } catch (mailErr) {
+      console.error(
+        "Error al notificar al jefe directo (reenvío solicitud):",
+        mailErr,
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message:
+        "Solicitud actualizada y reenviada. Pendiente de aprobación del jefe directo.",
+      data: { id_solicitud },
+      notificacion_correo: notificacionCorreo,
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error("Error al reenviar solicitud:", error);
+    return NextResponse.json(
+      {
+        error: "Error al reenviar la solicitud",
         details: error.message,
       },
       { status: 500 },

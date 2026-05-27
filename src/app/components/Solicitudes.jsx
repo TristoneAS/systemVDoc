@@ -26,8 +26,15 @@ import {
   Tooltip,
   Divider,
 } from "@mui/material";
-import { Check, Close, InsertDriveFile, Visibility } from "@mui/icons-material";
+import {
+  Check,
+  Close,
+  Edit,
+  InsertDriveFile,
+  Visibility,
+} from "@mui/icons-material";
 import HexagonMenu from "./HexagonMenu";
+import EditarSolicitudRechazadaDialog from "./EditarSolicitudRechazadaDialog";
 
 function formatFecha(v) {
   if (!v) return "—";
@@ -40,7 +47,7 @@ function formatFecha(v) {
 }
 
 /** archivos_json desde MySQL puede venir como objeto o string JSON */
-function parseArchivos(archivos_json) {
+export function parseArchivos(archivos_json) {
   if (!archivos_json) return [];
   if (Array.isArray(archivos_json)) return archivos_json;
   if (typeof archivos_json === "string") {
@@ -138,7 +145,7 @@ function labelFaseAprobacion(r) {
   return "Comité / área";
 }
 
-function getMiEmpId() {
+export function getMiEmpId() {
   try {
     const raw = localStorage.getItem("infoUser");
     if (!raw) return "";
@@ -147,6 +154,40 @@ function getMiEmpId() {
   } catch {
     return "";
   }
+}
+
+export function getIsAdmin() {
+  try {
+    return localStorage.getItem("isAdmin") === "true";
+  } catch {
+    return false;
+  }
+}
+
+function esAprobacionPendiente(status) {
+  return String(status || "")
+    .toLowerCase()
+    .trim() === "pendiente";
+}
+
+function existeJefeDirectoAprobadoEnFilas(aprobaciones) {
+  return (aprobaciones || []).some(
+    (a) =>
+      String(a.tipo_aprobador ?? "").trim() === "jefe_directo" &&
+      String(a.status || "")
+        .toLowerCase()
+        .trim() === "aprobado",
+  );
+}
+
+/** Admin puede registrar aprobación por ausencia respetando el orden (jefe primero). */
+function adminPuedeAprobarAusencia(aprobacion, todasAprobaciones) {
+  if (!esAprobacionPendiente(aprobacion.status)) return false;
+  const tipo = String(aprobacion.tipo_aprobador ?? "").trim();
+  if (tipo === "responsable_area" || tipo === "forzado") {
+    return existeJefeDirectoAprobadoEnFilas(todasAprobaciones);
+  }
+  return true;
 }
 
 /** Badges de estado: pastilla, texto blanco (referencia UI). */
@@ -161,6 +202,13 @@ const chipPillBase = {
     color: "#ffffff",
   },
 };
+
+export function esEstadoRechazada(estado) {
+  const e = String(estado || "")
+    .toLowerCase()
+    .trim();
+  return e === "rechazada" || e === "rechazado";
+}
 
 function labelEstadoChip(estado) {
   const e = String(estado || "").toLowerCase();
@@ -238,6 +286,10 @@ function Solicitudes({ misSolicitudes = false }) {
   const [resolverModalId, setResolverModalId] = useState(null);
   const [resolverComentario, setResolverComentario] = useState("");
   const [resolverComentarioError, setResolverComentarioError] = useState("");
+  const [editarSolicitudOpen, setEditarSolicitudOpen] = useState(false);
+  const [solicitudAEditar, setSolicitudAEditar] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminAusenciaLoadingId, setAdminAusenciaLoadingId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -290,6 +342,10 @@ function Solicitudes({ misSolicitudes = false }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    setIsAdmin(getIsAdmin());
+  }, []);
 
   const abrirModalResolver = (id_solicitud, accion) => {
     const empId = getMiEmpId();
@@ -377,12 +433,7 @@ function Solicitudes({ misSolicitudes = false }) {
     }
   };
 
-  const abrirAprobaciones = async (solicitud) => {
-    const id_solicitud = solicitud.id_solicitud;
-    setDialogAprobacionesOpen(true);
-    setDialogAprobacionesId(id_solicitud);
-    setDialogAprobacionesSolicitud(solicitud);
-    setDialogAprobacionesRows([]);
+  const cargarAprobacionesModal = async (id_solicitud) => {
     setDialogAprobacionesError("");
     setDialogAprobacionesLoading(true);
     try {
@@ -402,12 +453,86 @@ function Solicitudes({ misSolicitudes = false }) {
     }
   };
 
+  const abrirAprobaciones = async (solicitud) => {
+    const id_solicitud = solicitud.id_solicitud;
+    setDialogAprobacionesOpen(true);
+    setDialogAprobacionesId(id_solicitud);
+    setDialogAprobacionesSolicitud(solicitud);
+    setDialogAprobacionesRows([]);
+    await cargarAprobacionesModal(id_solicitud);
+  };
+
   const cerrarDialogAprobaciones = () => {
     setDialogAprobacionesOpen(false);
     setDialogAprobacionesId(null);
     setDialogAprobacionesSolicitud(null);
     setDialogAprobacionesRows([]);
     setDialogAprobacionesError("");
+    setAdminAusenciaLoadingId(null);
+  };
+
+  const adminAprobarAusencia = async (id_aprobacion) => {
+    const empId = getMiEmpId();
+    if (!empId) {
+      setBanner({
+        severity: "error",
+        text: "No hay número de empleado en la sesión. Vuelva a iniciar sesión.",
+      });
+      return;
+    }
+    if (!dialogAprobacionesId) return;
+
+    setAdminAusenciaLoadingId(id_aprobacion);
+    setBanner(null);
+    try {
+      const res = await fetch(
+        `/api/solicitudes/${dialogAprobacionesId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accion: "aprobar_ausencia",
+            is_admin: true,
+            emp_id_actor: empId,
+            id_aprobacion,
+          }),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setBanner({
+          severity: "error",
+          text: data.error || "No se pudo registrar la aprobación por ausencia",
+        });
+        return;
+      }
+      setBanner({
+        severity: "success",
+        text: data.message || "Aprobación por ausencia registrada",
+      });
+      await load();
+      const idSol = dialogAprobacionesId;
+      const empIdList = getMiEmpId();
+      let url = "/api/solicitudes";
+      if (misSolicitudes && empIdList) {
+        url = `/api/solicitudes?solicitante_emp_id=${encodeURIComponent(empIdList)}`;
+      } else if (empIdList) {
+        url = `/api/solicitudes?for_emp_id=${encodeURIComponent(empIdList)}`;
+      }
+      const resList = await fetch(url);
+      const listData = await resList.json();
+      if (resList.ok && Array.isArray(listData.data)) {
+        const actualizada = listData.data.find((r) => r.id_solicitud === idSol);
+        if (actualizada) {
+          setDialogAprobacionesSolicitud(actualizada);
+        }
+      }
+      await cargarAprobacionesModal(idSol);
+    } catch {
+      setBanner({ severity: "error", text: "Error de conexión" });
+    } finally {
+      setAdminAusenciaLoadingId(null);
+    }
   };
 
   return (
@@ -439,7 +564,8 @@ function Solicitudes({ misSolicitudes = false }) {
             <>
               Consulte el estado de las solicitudes que usted ha creado. Use el
               icono del ojo para ver los documentos adjuntos y el avance de las
-              aprobaciones.
+              aprobaciones. Si una solicitud fue rechazada, puede editarla y
+              reenviarla; el flujo de aprobación reinicia con su jefe directo.
             </>
           ) : (
             <>
@@ -599,7 +725,9 @@ function Solicitudes({ misSolicitudes = false }) {
                               backgroundColor:
                                 r.estado === "pendiente"
                                   ? "#FB8500"
-                                  : r.estado === "aprobada"
+                                  : r.estado === "aprobada" ||
+                                      String(r.estado).toLowerCase() ===
+                                        "aprobado"
                                     ? "#1B5E20"
                                     : "#C62828",
                             }}
@@ -718,6 +846,26 @@ function Solicitudes({ misSolicitudes = false }) {
                                 </IconButton>
                               </span>
                             </Tooltip>
+                            {misSolicitudes && esEstadoRechazada(r.estado) && (
+                              <Tooltip title="Editar y reenviar a aprobación">
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    disabled={
+                                      sinEmpEnSesion || actionId !== null
+                                    }
+                                    onClick={() => {
+                                      setSolicitudAEditar(r);
+                                      setEditarSolicitudOpen(true);
+                                    }}
+                                    sx={{ color: "#F57C00" }}
+                                    aria-label="Editar solicitud rechazada"
+                                  >
+                                    <Edit sx={{ fontSize: 22 }} />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                            )}
                             {!misSolicitudes && (
                               <>
                                 <Tooltip
@@ -990,6 +1138,16 @@ function Solicitudes({ misSolicitudes = false }) {
           >
             Aprobaciones
           </Typography>
+          {isAdmin &&
+            dialogAprobacionesSolicitud?.estado === "pendiente" &&
+            !dialogAprobacionesLoading && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Como administrador puede aprobar en nombre de un aprobador
+                ausente. El comentario quedará registrado como{" "}
+                <strong>aprobado por ausencia</strong>. Respete el orden: primero
+                jefe directo, luego el resto.
+              </Alert>
+            )}
           {dialogAprobacionesLoading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
               <CircularProgress sx={{ color: "#1976D2" }} />
@@ -1026,6 +1184,15 @@ function Solicitudes({ misSolicitudes = false }) {
                     <TableCell sx={{ fontWeight: 600, color: "#757575" }}>
                       Comentario
                     </TableCell>
+                    {isAdmin &&
+                      dialogAprobacionesSolicitud?.estado === "pendiente" && (
+                        <TableCell
+                          align="right"
+                          sx={{ fontWeight: 600, color: "#757575" }}
+                        >
+                          Admin
+                        </TableCell>
+                      )}
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -1068,6 +1235,46 @@ function Solicitudes({ misSolicitudes = false }) {
                       >
                         {a.comentario?.trim() ? a.comentario : "—"}
                       </TableCell>
+                      {isAdmin &&
+                        dialogAprobacionesSolicitud?.estado === "pendiente" && (
+                          <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                            {adminPuedeAprobarAusencia(
+                              a,
+                              dialogAprobacionesRows,
+                            ) ? (
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                disabled={adminAusenciaLoadingId !== null}
+                                onClick={() => adminAprobarAusencia(a.id)}
+                                sx={{
+                                  textTransform: "none",
+                                  fontSize: "0.72rem",
+                                  color: "#1976D2",
+                                  borderColor: "#1976D2",
+                                  py: 0.25,
+                                  px: 1,
+                                }}
+                              >
+                                {adminAusenciaLoadingId === a.id ? (
+                                  <CircularProgress
+                                    size={18}
+                                    sx={{ color: "#1976D2" }}
+                                  />
+                                ) : (
+                                  "Aprobar por ausencia"
+                                )}
+                              </Button>
+                            ) : esAprobacionPendiente(a.status) ? (
+                              <Typography
+                                variant="caption"
+                                sx={{ color: "#757575" }}
+                              >
+                                Pendiente jefe
+                              </Typography>
+                            ) : null}
+                          </TableCell>
+                        )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -1084,6 +1291,26 @@ function Solicitudes({ misSolicitudes = false }) {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {misSolicitudes && (
+        <EditarSolicitudRechazadaDialog
+          open={editarSolicitudOpen}
+          solicitud={solicitudAEditar}
+          onClose={() => {
+            setEditarSolicitudOpen(false);
+            setSolicitudAEditar(null);
+          }}
+          onSuccess={(message) => {
+            setBanner({
+              severity: "success",
+              text:
+                message ||
+                "Solicitud actualizada y reenviada. Pendiente de aprobación.",
+            });
+            load();
+          }}
+        />
+      )}
     </HexagonMenu>
   );
 }

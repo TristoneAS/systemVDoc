@@ -165,6 +165,23 @@ export async function crearAprobacionesSolicitud(
   return registros.length;
 }
 
+/** Elimina aprobaciones previas y las vuelve a crear (jefe → comité → responsable de área). */
+export async function reiniciarAprobacionesSolicitud(
+  connection,
+  empleadosPool,
+  { solicitudId, empIdSolicitante, idArea, idDocumento },
+) {
+  await connection.query(`DELETE FROM aprobaciones WHERE id_solicitud = ?`, [
+    solicitudId,
+  ]);
+  return crearAprobacionesSolicitud(connection, empleadosPool, {
+    solicitudId,
+    empIdSolicitante,
+    idArea,
+    idDocumento,
+  });
+}
+
 /** Si es responsable de área o forzado, debe existir antes el visto bueno del jefe directo. */
 export function requiereAprobacionJefePrevio(tipoAprobador) {
   const t = String(tipoAprobador ?? "").trim();
