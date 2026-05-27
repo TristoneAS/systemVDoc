@@ -134,17 +134,6 @@ function ListaArchivosSolicitud({ archivos_json }) {
   );
 }
 
-function labelFaseAprobacion(r) {
-  if (r.estado !== "pendiente") return "—";
-  if (r.fase_aprobacion === "jefe") return "Jefe directo";
-  if (r.fase_aprobacion === "final") return "Comité / área";
-  const jefe =
-    r.emp_id_jefe_aprobador != null &&
-    String(r.emp_id_jefe_aprobador).trim() !== "";
-  if (jefe && !r.aprobacion_jefe_en) return "Jefe directo";
-  return "Comité / área";
-}
-
 export function getMiEmpId() {
   try {
     const raw = localStorage.getItem("infoUser");
@@ -650,7 +639,6 @@ function Solicitudes({ misSolicitudes = false }) {
                   <TableCell>ID</TableCell>
                   <TableCell>Tipo</TableCell>
                   <TableCell>Estado</TableCell>
-                  {!misSolicitudes && <TableCell>Fase</TableCell>}
                   <TableCell>ID documento</TableCell>
                   <TableCell>Detalle</TableCell>
                   <TableCell>Quién realizó la solicitud</TableCell>
@@ -662,7 +650,7 @@ function Solicitudes({ misSolicitudes = false }) {
                 {rows.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={misSolicitudes ? 8 : 9}
+                      colSpan={8}
                       sx={{ color: "#757575", border: 0 }}
                     >
                       {misSolicitudes
@@ -674,9 +662,6 @@ function Solicitudes({ misSolicitudes = false }) {
                   rows.map((r) => {
                     const puedeAprobar = r.puede_aprobar === true;
                     const puedeRechazar = r.puede_rechazar === true;
-                    const faseLabel = misSolicitudes
-                      ? null
-                      : labelFaseAprobacion(r);
                     return (
                       <TableRow
                         key={r.id_solicitud}
@@ -733,44 +718,6 @@ function Solicitudes({ misSolicitudes = false }) {
                             }}
                           />
                         </TableCell>
-                        {!misSolicitudes && (
-                          <TableCell sx={{ maxWidth: 200, verticalAlign: "top" }}>
-                            {r.estado === "pendiente" ? (
-                              <Box>
-                                <Chip
-                                  size="small"
-                                  label={faseLabel}
-                                  sx={{
-                                    height: 26,
-                                    borderRadius: 999,
-                                    bgcolor: "#ECEFF1",
-                                    color: "#37474F",
-                                    fontWeight: 500,
-                                    fontSize: "0.72rem",
-                                  }}
-                                />
-                                {faseLabel === "Comité / área" &&
-                                  r.fase2_total != null &&
-                                  Number(r.fase2_total) > 0 && (
-                                    <Typography
-                                      variant="caption"
-                                      component="div"
-                                      sx={{
-                                        mt: 0.75,
-                                        color: "rgba(33, 33, 33, 0.82)",
-                                        lineHeight: 1.35,
-                                      }}
-                                    >
-                                      {Number(r.fase2_completadas) || 0} /{" "}
-                                      {Number(r.fase2_total)} aprobaciones
-                                    </Typography>
-                                  )}
-                              </Box>
-                            ) : (
-                              "—"
-                            )}
-                          </TableCell>
-                        )}
                         <TableCell
                           sx={{
                             maxWidth: 180,

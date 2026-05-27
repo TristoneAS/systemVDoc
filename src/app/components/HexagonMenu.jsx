@@ -142,7 +142,15 @@ function HexagonMenu({ selectedItemId, children }) {
     syncSessionCookieFromStorage();
 
     if (!isAuthenticatedClient()) {
-      router.replace("/");
+      const path =
+        typeof window !== "undefined"
+          ? `${window.location.pathname}${window.location.search}`
+          : "";
+      if (path.startsWith("/dashboard") && !path.startsWith("//")) {
+        router.replace(`/?redirect=${encodeURIComponent(path)}`);
+      } else {
+        router.replace("/");
+      }
       return;
     }
 

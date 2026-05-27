@@ -24,14 +24,16 @@ import {
   CheckCircle,
 } from "@mui/icons-material";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
+  getSafeRedirectPath,
   getSessionExpiresAt,
   setSessionCookieClient,
 } from "@/libs/auth_session";
 
 function Login() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const [user, setUser] = useState({ user: "", password: "" });
   const [loading, setLoading] = useState(false);
@@ -110,17 +112,10 @@ function Login() {
             } catch (err) {
               console.error("No se pudo crear la cookie de sesión:", err);
             }
+            const dest = getSafeRedirectPath(searchParams.get("redirect"));
             setTimeout(() => {
-              const params = new URLSearchParams(window.location.search);
-              const redirect = params.get("redirect");
-              const dest =
-                redirect &&
-                redirect.startsWith("/dashboard") &&
-                !redirect.startsWith("//")
-                  ? redirect
-                  : "/dashboard";
-              router.push(dest);
-            }, 500);
+              router.replace(dest);
+            }, 300);
           } else {
             // Si no se encontró el empleado, bloquear el login
             setSnackbarMessage("El alias del empleado no está registrado");

@@ -39,8 +39,23 @@ import {
   OpenInNew,
   Close,
   Slideshow,
+  Block,
+  CheckCircle,
 } from "@mui/icons-material";
 import HexagonMenu from "./HexagonMenu";
+import { getIsAdmin } from "./Solicitudes";
+
+function normalizarEstadoDocumento(estado) {
+  const e = String(estado ?? "activo")
+    .trim()
+    .toLowerCase();
+  if (e === "inactivo") return "inactivo";
+  return "activo";
+}
+
+function labelEstadoDocumento(estado) {
+  return normalizarEstadoDocumento(estado) === "activo" ? "Activo" : "Inactivo";
+}
 
 function VisualizarDocumentos() {
   const [documentos, setDocumentos] = useState([]);
@@ -50,17 +65,29 @@ function VisualizarDocumentos() {
   const [selectedDocumento, setSelectedDocumento] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [archivoVisualizar, setArchivoVisualizar] = useState(null);
+  const [filtroEstado, setFiltroEstado] = useState("todos");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [estadoActionId, setEstadoActionId] = useState(null);
+  const [banner, setBanner] = useState(null);
+
+  useEffect(() => {
+    setIsAdmin(getIsAdmin());
+  }, []);
 
   useEffect(() => {
     cargarDocumentos();
-  }, []);
+  }, [filtroEstado]);
 
   const cargarDocumentos = async () => {
     setLoading(true);
     setError("");
 
     try {
-      const response = await fetch("/api/documentos");
+      const url =
+        filtroEstado === "activo" || filtroEstado === "inactivo"
+          ? `/api/documentos?estado=${encodeURIComponent(filtroEstado)}`
+          : "/api/documentos";
+      const response = await fetch(url);
       const data = await response.json();
 
       if (!response.ok) {
@@ -76,6 +103,43 @@ function VisualizarDocumentos() {
       setDocumentos([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const cambiarEstadoDocumento = async (idDocumento, nuevoEstado) => {
+    setEstadoActionId(idDocumento);
+    setBanner(null);
+    try {
+      const response = await fetch(`/api/documentos/${idDocumento}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ estado: nuevoEstado, is_admin: true }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setBanner({
+          severity: "error",
+          text: data.error || "No se pudo actualizar el estado",
+        });
+        return;
+      }
+      setBanner({
+        severity: "success",
+        text: data.message || "Estado actualizado",
+      });
+      await cargarDocumentos();
+      if (
+        selectedDocumento?.id_documento === idDocumento &&
+        openDialog
+      ) {
+        setSelectedDocumento((prev) =>
+          prev ? { ...prev, estado: nuevoEstado } : prev,
+        );
+      }
+    } catch {
+      setBanner({ severity: "error", text: "Error de conexión" });
+    } finally {
+      setEstadoActionId(null);
     }
   };
 
@@ -253,6 +317,52 @@ function VisualizarDocumentos() {
             ),
           }}
         />
+
+        <Box
+          sx={{
+            mb: 2,
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 1,
+            alignItems: "center",
+          }}
+        >
+          <Typography variant="body2" sx={{ color: "#757575", mr: 1 }}>
+            Filtrar por estado:
+          </Typography>
+          {[
+            { value: "todos", label: "Todos" },
+            { value: "activo", label: "Activos" },
+            { value: "inactivo", label: "Inactivos" },
+          ].map((opt) => (
+            <Chip
+              key={opt.value}
+              label={opt.label}
+              clickable
+              onClick={() => setFiltroEstado(opt.value)}
+              sx={{
+                fontWeight: 600,
+                bgcolor:
+                  filtroEstado === opt.value ? "#1976D2" : "#ECEFF1",
+                color: filtroEstado === opt.value ? "#ffffff" : "#37474F",
+                "&:hover": {
+                  bgcolor:
+                    filtroEstado === opt.value ? "#1565C0" : "#E0E0E0",
+                },
+              }}
+            />
+          ))}
+        </Box>
+
+        {banner && (
+          <Alert
+            severity={banner.severity}
+            sx={{ mb: 2 }}
+            onClose={() => setBanner(null)}
+          >
+            {banner.text}
+          </Alert>
+        )}
 
         {loading && (
           <Box
@@ -474,12 +584,20 @@ function VisualizarDocumentos() {
                           }}
                         >
                           <Chip
-                            label={doc.estado ?? "—"}
+                            label={labelEstadoDocumento(doc.estado)}
                             size="small"
                             sx={{
-                              backgroundColor: "rgba(25, 118, 210, 0.14)",
-                              color: "#1976D2",
-                              fontWeight: 500,
+                              backgroundColor:
+                                normalizarEstadoDocumento(doc.estado) ===
+                                "activo"
+                                  ? "rgba(46, 125, 50, 0.15)"
+                                  : "rgba(198, 40, 40, 0.12)",
+                              color:
+                                normalizarEstadoDocumento(doc.estado) ===
+                                "activo"
+                                  ? "#2E7D32"
+                                  : "#C62828",
+                              fontWeight: 600,
                             }}
                           />
                         </TableCell>
@@ -512,21 +630,80 @@ function VisualizarDocumentos() {
                             borderBottom: "none",
                           }}
                         >
-                          <Tooltip title="Ver detalles">
-                            <IconButton
-                              onClick={() =>
-                                handleVerDetalles(doc.id_documento)
-                              }
-                              sx={{
-                                color: "#1976D2",
-                                "&:hover": {
-                                  backgroundColor: "rgba(25, 118, 210, 0.09)",
-                                },
-                              }}
-                            >
-                              <Visibility />
-                            </IconButton>
-                          </Tooltip>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              gap: 0.25,
+                              justifyContent: "flex-start",
+                            }}
+                          >
+                            <Tooltip title="Ver detalles">
+                              <IconButton
+                                onClick={() =>
+                                  handleVerDetalles(doc.id_documento)
+                                }
+                                sx={{
+                                  color: "#1976D2",
+                                  "&:hover": {
+                                    backgroundColor:
+                                      "rgba(25, 118, 210, 0.09)",
+                                  },
+                                }}
+                              >
+                                <Visibility />
+                              </IconButton>
+                            </Tooltip>
+                            {isAdmin &&
+                              normalizarEstadoDocumento(doc.estado) ===
+                                "activo" && (
+                                <Tooltip title="Deshabilitar documento">
+                                  <span>
+                                    <IconButton
+                                      size="small"
+                                      disabled={estadoActionId !== null}
+                                      onClick={() =>
+                                        cambiarEstadoDocumento(
+                                          doc.id_documento,
+                                          "inactivo",
+                                        )
+                                      }
+                                      sx={{ color: "#C62828" }}
+                                    >
+                                      {estadoActionId === doc.id_documento ? (
+                                        <CircularProgress size={20} />
+                                      ) : (
+                                        <Block />
+                                      )}
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                              )}
+                            {isAdmin &&
+                              normalizarEstadoDocumento(doc.estado) ===
+                                "inactivo" && (
+                                <Tooltip title="Habilitar documento">
+                                  <span>
+                                    <IconButton
+                                      size="small"
+                                      disabled={estadoActionId !== null}
+                                      onClick={() =>
+                                        cambiarEstadoDocumento(
+                                          doc.id_documento,
+                                          "activo",
+                                        )
+                                      }
+                                      sx={{ color: "#2E7D32" }}
+                                    >
+                                      {estadoActionId === doc.id_documento ? (
+                                        <CircularProgress size={20} />
+                                      ) : (
+                                        <CheckCircle />
+                                      )}
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                              )}
+                          </Box>
                         </TableCell>
                       </TableRow>
                     ))
@@ -623,7 +800,7 @@ function VisualizarDocumentos() {
                     Estado
                   </Typography>
                   <Typography variant="body1" sx={{ color: "#1976D2", mb: 2 }}>
-                    {selectedDocumento.estado ?? "—"}
+                    {labelEstadoDocumento(selectedDocumento.estado)}
                   </Typography>
                 </Grid>
                 <Grid item xs={12}>

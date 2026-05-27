@@ -21,6 +21,10 @@ import {
   notificarJefeDirectoSolicitudCreada,
   resolveAppBaseUrl,
 } from "@/libs/notificar_aprobadores_solicitud";
+import {
+  notificarSolicitanteSolicitudAprobada,
+  notificarSolicitanteSolicitudRechazada,
+} from "@/libs/notificar_solicitante_solicitud";
 
 const UPLOAD_DOCS = path.join(process.cwd(), "public", "uploads", "documentos");
 const UPLOAD_SOLICITUDES = path.join(
@@ -303,7 +307,7 @@ async function procesarVistoBueno(
     return { error: fin.error, status: fin.status, rollback: true };
   }
 
-  return { commit: true, message: fin.message };
+  return { commit: true, message: fin.message, solicitudCompletada: true };
 }
 
 export async function PATCH(request, { params }) {
@@ -416,6 +420,12 @@ export async function PATCH(request, { params }) {
           { status: 400 },
         );
       }
+      const [infoRechazoRows] = await connection.query(
+        `SELECT emp_nombre, tipo_aprobador FROM aprobaciones WHERE id = ?`,
+        [filaPend.id],
+      );
+      const infoRechazo = infoRechazoRows[0] ?? {};
+
       const [rejResult] = await connection.query(
         `UPDATE aprobaciones SET status = ?, comentario = ? WHERE id = ? AND status = 'pendiente'`,
         [STATUS_APROBACION_RECHAZADO, comentario, filaPend.id],
@@ -435,9 +445,33 @@ export async function PATCH(request, { params }) {
         [id_solicitud],
       );
       await connection.commit();
+
+      let notificacionSolicitante = null;
+      try {
+        const baseUrl = resolveAppBaseUrl(request);
+        notificacionSolicitante = await notificarSolicitanteSolicitudRechazada(
+          conn,
+          id_solicitud,
+          {
+            rechazadoPorNombre: infoRechazo.emp_nombre,
+            rechazadoPorTipo: infoRechazo.tipo_aprobador,
+            comentarioRechazo: comentario,
+            enlaceSistema: baseUrl
+              ? `${baseUrl}/dashboard/mis_solicitudes`
+              : undefined,
+          },
+        );
+      } catch (mailErr) {
+        console.error(
+          "Error al notificar al solicitante (rechazo):",
+          mailErr,
+        );
+      }
+
       return NextResponse.json({
         success: true,
         message: "Solicitud rechazada",
+        notificacion_solicitante: notificacionSolicitante,
       });
     }
 
@@ -527,12 +561,35 @@ export async function PATCH(request, { params }) {
     }
 
     await connection.commit();
+
+    let notificacionSolicitante = null;
+    if (resultado.solicitudCompletada) {
+      try {
+        const baseUrl = resolveAppBaseUrl(request);
+        notificacionSolicitante = await notificarSolicitanteSolicitudAprobada(
+          conn,
+          id_solicitud,
+          {
+            enlaceSistema: baseUrl
+              ? `${baseUrl}/dashboard/mis_solicitudes`
+              : undefined,
+          },
+        );
+      } catch (mailErr) {
+        console.error(
+          "Error al notificar al solicitante (aprobación total):",
+          mailErr,
+        );
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: esAprobarAusencia
         ? `Aprobación registrada por ausencia (${filaPend.id}). ${resultado.message}`
         : resultado.message,
       notificacion_correo: resultado.notificacion_correo ?? undefined,
+      notificacion_solicitante: notificacionSolicitante ?? undefined,
     });
   } catch (error) {
     await connection.rollback();

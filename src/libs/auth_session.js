@@ -87,3 +87,27 @@ export function syncSessionCookieFromStorage() {
     setSessionCookieClient(exp);
   }
 }
+
+/**
+ * Ruta interna segura tras login (solo rutas bajo /dashboard).
+ * @param {string|null|undefined} path
+ * @returns {string}
+ */
+export function getSafeRedirectPath(path) {
+  const raw = String(path ?? "").trim();
+  if (!raw || !raw.startsWith("/dashboard") || raw.startsWith("//")) {
+    return "/dashboard";
+  }
+  try {
+    const url = new URL(raw, "http://localhost");
+    if (
+      !url.pathname.startsWith("/dashboard") ||
+      url.pathname.startsWith("//")
+    ) {
+      return "/dashboard";
+    }
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return "/dashboard";
+  }
+}

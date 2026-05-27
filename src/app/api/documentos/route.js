@@ -21,6 +21,12 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const id_documento = searchParams.get("id_documento");
     const nomenclatura = searchParams.get("nomenclatura");
+    const estadoFiltro = String(searchParams.get("estado") || "")
+      .trim()
+      .toLowerCase();
+
+    const filtroEstadoValido =
+      estadoFiltro === "activo" || estadoFiltro === "inactivo";
 
     if (nomenclatura !== null && nomenclatura !== undefined) {
       const term = String(nomenclatura).trim();
@@ -30,6 +36,14 @@ export async function GET(request) {
           { status: 400 },
         );
       }
+      const whereParts = ["d.nomenclatura LIKE ?"];
+      const queryParams = [`%${term}%`];
+      if (filtroEstadoValido) {
+        whereParts.push("d.estado = ?");
+        queryParams.push(estadoFiltro);
+      } else {
+        whereParts.push("d.estado = 'activo'");
+      }
       const [documentos] = await conn.query(
         `SELECT d.*,
          MAX(ar.area_nombre) AS area_nombre,
@@ -37,10 +51,10 @@ export async function GET(request) {
          FROM documentos d
          LEFT JOIN areas ar ON d.id_area = ar.id_area
          LEFT JOIN archivos_documentos a ON d.id_documento = a.id_documento
-         WHERE d.nomenclatura LIKE ?
+         WHERE ${whereParts.join(" AND ")}
          GROUP BY d.id_documento
          ORDER BY d.fecha_creacion DESC`,
-        [`%${term}%`],
+        queryParams,
       );
       return NextResponse.json({
         success: true,
@@ -86,7 +100,8 @@ export async function GET(request) {
         data: documento[0],
       });
     } else {
-      // Obtener todos los documentos
+      const whereClause = filtroEstadoValido ? " WHERE d.estado = ?" : "";
+      const listParams = filtroEstadoValido ? [estadoFiltro] : [];
       const [documentos] = await conn.query(
         `SELECT d.*,
          MAX(ar.area_nombre) AS area_nombre,
@@ -94,8 +109,10 @@ export async function GET(request) {
          FROM documentos d
          LEFT JOIN areas ar ON d.id_area = ar.id_area
          LEFT JOIN archivos_documentos a ON d.id_documento = a.id_documento
+         ${whereClause}
          GROUP BY d.id_documento
          ORDER BY d.fecha_creacion DESC`,
+        listParams,
       );
 
       return NextResponse.json({

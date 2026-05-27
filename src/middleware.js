@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   SESSION_COOKIE_NAME,
   SESSION_COOKIE_VALUE,
+  getSafeRedirectPath,
 } from "@/libs/auth_session";
 
 export function middleware(request) {
@@ -12,21 +13,16 @@ export function middleware(request) {
   if (pathname.startsWith("/dashboard")) {
     if (!isLoggedIn) {
       const loginUrl = new URL("/", request.url);
-      if (pathname !== "/dashboard") {
-        loginUrl.searchParams.set("redirect", pathname);
-      }
+      const returnTo = `${pathname}${request.nextUrl.search}`;
+      loginUrl.searchParams.set("redirect", returnTo);
       return NextResponse.redirect(loginUrl);
     }
     return NextResponse.next();
   }
 
   if (pathname === "/" && isLoggedIn) {
-    const redirectTo =
-      request.nextUrl.searchParams.get("redirect") || "/dashboard";
-    const safeRedirect =
-      redirectTo.startsWith("/dashboard") && !redirectTo.startsWith("//")
-        ? redirectTo
-        : "/dashboard";
+    const redirectTo = request.nextUrl.searchParams.get("redirect");
+    const safeRedirect = getSafeRedirectPath(redirectTo);
     return NextResponse.redirect(new URL(safeRedirect, request.url));
   }
 
@@ -34,5 +30,5 @@ export function middleware(request) {
 }
 
 export const config = {
-  matcher: ["/", "/dashboard/:path*"],
+  matcher: ["/", "/dashboard", "/dashboard/:path*"],
 };
