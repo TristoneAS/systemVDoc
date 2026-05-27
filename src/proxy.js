@@ -5,7 +5,7 @@ import {
   getSafeRedirectPath,
 } from "@/libs/auth_session";
 
-export function middleware(request) {
+export function proxy(request) {
   const { pathname } = request.nextUrl;
   const session = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   const isLoggedIn = session === SESSION_COOKIE_VALUE;
