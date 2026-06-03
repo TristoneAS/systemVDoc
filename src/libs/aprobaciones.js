@@ -91,6 +91,83 @@ export const TIPO_APROBADOR_FORZADO = "forzado";
 /** Responsable del área del trámite (segunda fase). */
 export const TIPO_APROBADOR_RESPONSABLE_AREA = "responsable_area";
 
+const ORDEN_TIPOS_APROBADOR = [
+  TIPO_APROBADOR_JEFE_DIRECTO,
+  TIPO_APROBADOR_FORZADO,
+  TIPO_APROBADOR_RESPONSABLE_AREA,
+];
+
+/** Separa tipos combinados en `tipo_aprobador` (p. ej. `jefe_directo,forzado`). */
+export function parseTiposAprobador(tipoAprobador) {
+  return String(tipoAprobador ?? "")
+    .split(/[,+]/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
+/** Etiqueta legible para uno o varios roles en la misma fila. */
+export function labelTiposAprobador(tipoAprobador) {
+  const tipos = parseTiposAprobador(tipoAprobador);
+  if (tipos.length === 0) return "Aprobador";
+  const labels = tipos.map((t) => {
+    if (t === TIPO_APROBADOR_JEFE_DIRECTO) return "Jefe directo";
+    if (t === TIPO_APROBADOR_RESPONSABLE_AREA) return "Responsable de área";
+    if (t === TIPO_APROBADOR_FORZADO) return "Requerido";
+    return t;
+  });
+  return [...new Set(labels)].join(", ");
+}
+
+function ordenarTiposAprobador(tipos) {
+  return [...new Set(tipos)].sort(
+    (a, b) => ORDEN_TIPOS_APROBADOR.indexOf(a) - ORDEN_TIPOS_APROBADOR.indexOf(b),
+  );
+}
+
+export function incluyeTipoAprobador(tipoAprobador, tipoBuscado) {
+  return parseTiposAprobador(tipoAprobador).includes(tipoBuscado);
+}
+
+/**
+ * Una fila por emp_id: combina roles (jefe + comité + área) en `tipo_aprobador`
+ * separados por coma, p. ej. `jefe_directo,forzado`.
+ */
+function consolidarRegistrosAprobacion(solicitudId, slots) {
+  const porEmpId = new Map();
+  const ordenEmpIds = [];
+
+  for (const { emp, tipo } of slots) {
+    const empId = normalizeEmpId(emp?.emp_id);
+    if (!empId || !emp?.emp_nombre) continue;
+
+    let entry = porEmpId.get(empId);
+    if (!entry) {
+      entry = {
+        emp_id: empId,
+        emp_nombre: emp.emp_nombre,
+        emp_correo: emp.emp_correo,
+        tipos: new Set(),
+      };
+      porEmpId.set(empId, entry);
+      ordenEmpIds.push(empId);
+    }
+    entry.tipos.add(tipo);
+  }
+
+  return ordenEmpIds.map((empId) => {
+    const entry = porEmpId.get(empId);
+    const tipoCombinado = ordenarTiposAprobador([...entry.tipos]).join(",");
+    return [
+      solicitudId,
+      entry.emp_id,
+      entry.emp_nombre,
+      entry.emp_correo,
+      "pendiente",
+      tipoCombinado,
+    ];
+  });
+}
+
 /** Valor en `aprobaciones.status` cuando el visto bueno está completo. */
 export const STATUS_APROBACION_APROBADO = "aprobado";
 
@@ -109,33 +186,11 @@ export async function crearAprobacionesSolicitud(
     idDocumento,
   });
 
-  /** Valores en columna `aprobaciones.tipo_aprobador`. */
-  const registros = [
-    [
-      solicitudId,
-      jefe.emp_id,
-      jefe.emp_nombre,
-      jefe.emp_correo,
-      "pendiente",
-      TIPO_APROBADOR_JEFE_DIRECTO,
-    ],
-    ...aprobadores.map((e) => [
-      solicitudId,
-      e.emp_id,
-      e.emp_nombre,
-      e.emp_correo,
-      "pendiente",
-      TIPO_APROBADOR_FORZADO,
-    ]),
-    [
-      solicitudId,
-      responsableArea.emp_id,
-      responsableArea.emp_nombre,
-      responsableArea.emp_correo,
-      "pendiente",
-      TIPO_APROBADOR_RESPONSABLE_AREA,
-    ],
-  ];
+  const registros = consolidarRegistrosAprobacion(solicitudId, [
+    { emp: jefe, tipo: TIPO_APROBADOR_JEFE_DIRECTO },
+    ...aprobadores.map((e) => ({ emp: e, tipo: TIPO_APROBADOR_FORZADO })),
+    { emp: responsableArea, tipo: TIPO_APROBADOR_RESPONSABLE_AREA },
+  ]);
 
   if (registros.length === 0) {
     throw new Error("No se generaron aprobaciones para la solicitud.");
@@ -182,10 +237,14 @@ export async function reiniciarAprobacionesSolicitud(
   });
 }
 
-/** Si es responsable de área o forzado, debe existir antes el visto bueno del jefe directo. */
+/** Si solo tiene roles de 2.ª fase, debe existir antes el visto bueno del jefe directo. */
 export function requiereAprobacionJefePrevio(tipoAprobador) {
-  const t = String(tipoAprobador ?? "").trim();
-  return t === TIPO_APROBADOR_RESPONSABLE_AREA || t === TIPO_APROBADOR_FORZADO;
+  const tipos = parseTiposAprobador(tipoAprobador);
+  if (tipos.includes(TIPO_APROBADOR_JEFE_DIRECTO)) return false;
+  return (
+    tipos.includes(TIPO_APROBADOR_RESPONSABLE_AREA) ||
+    tipos.includes(TIPO_APROBADOR_FORZADO)
+  );
 }
 
 /**
@@ -200,12 +259,12 @@ export async function obtenerAprobacionPendienteDelActor(
   const emp = normalizeEmpId(empIdActor);
   if (!emp) return null;
   const [rows] = await connection.query(
-    `SELECT id, tipo_aprobador, status FROM aprobaciones
+    `SELECT id, emp_id, tipo_aprobador, status FROM aprobaciones
      WHERE id_solicitud = ? AND TRIM(emp_id) = ? AND status = 'pendiente'
-     ORDER BY CASE COALESCE(tipo_aprobador, '')
-       WHEN 'jefe_directo' THEN 1
-       WHEN 'forzado' THEN 2
-       WHEN 'responsable_area' THEN 3
+     ORDER BY CASE
+       WHEN tipo_aprobador LIKE '%jefe_directo%' THEN 1
+       WHEN tipo_aprobador LIKE '%forzado%' THEN 2
+       WHEN tipo_aprobador LIKE '%responsable_area%' THEN 3
        ELSE 4 END
      LIMIT 1`,
     [idSolicitud, emp],
@@ -213,12 +272,35 @@ export async function obtenerAprobacionPendienteDelActor(
   return rows[0] ?? null;
 }
 
+/** Aprueba todas las filas pendientes del mismo emp_id (solicitudes antiguas con duplicados). */
+export async function aprobarTodasPendientesDelActor(
+  connection,
+  idSolicitud,
+  empIdActor,
+  comentario,
+) {
+  const emp = normalizeEmpId(empIdActor);
+  if (!emp) return 0;
+  const [result] = await connection.query(
+    `UPDATE aprobaciones SET status = ?, comentario = ?
+     WHERE id_solicitud = ? AND TRIM(emp_id) = ? AND status = 'pendiente'`,
+    [STATUS_APROBACION_APROBADO, comentario, idSolicitud, emp],
+  );
+  return result.affectedRows || 0;
+}
+
 export async function existeJefeDirectoAprobado(connection, idSolicitud) {
   const [rows] = await connection.query(
     `SELECT 1 FROM aprobaciones
-     WHERE id_solicitud = ? AND tipo_aprobador = ? AND status = ?
+     WHERE id_solicitud = ?
+       AND status = ?
+       AND tipo_aprobador LIKE ?
      LIMIT 1`,
-    [idSolicitud, TIPO_APROBADOR_JEFE_DIRECTO, STATUS_APROBACION_APROBADO],
+    [
+      idSolicitud,
+      STATUS_APROBACION_APROBADO,
+      `%${TIPO_APROBADOR_JEFE_DIRECTO}%`,
+    ],
   );
   return rows.length > 0;
 }

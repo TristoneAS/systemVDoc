@@ -15,7 +15,6 @@ import {
   Button,
   CircularProgress,
   Alert,
-  Link,
   Stack,
   Dialog,
   DialogTitle,
@@ -25,16 +24,24 @@ import {
   IconButton,
   Tooltip,
   Divider,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import {
+  Archive,
   Check,
   Close,
+  Download,
   Edit,
   InsertDriveFile,
   Visibility,
 } from "@mui/icons-material";
 import HexagonMenu from "./HexagonMenu";
 import EditarSolicitudRechazadaDialog from "./EditarSolicitudRechazadaDialog";
+import {
+  esEstadoObsoletaValor,
+  filtrarSolicitudesPorObsoletas,
+} from "@/libs/solicitudes_estado";
 
 function formatFecha(v) {
   if (!v) return "—";
@@ -69,9 +76,27 @@ function formatTamano(bytes) {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function esArchivoPdf(archivo) {
+  const tipo = String(archivo?.tipo_archivo ?? "").toLowerCase();
+  if (tipo.includes("pdf")) return true;
+  const nombre = String(archivo?.nombre_archivo ?? "").toLowerCase();
+  return nombre.endsWith(".pdf");
+}
+
+function descargarArchivoSolicitud(rutaArchivo, nombreArchivo) {
+  const link = document.createElement("a");
+  link.href = rutaArchivo;
+  link.download = nombreArchivo || "archivo";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 /** Lista de archivos de una solicitud (modal o reutilizable). */
 function ListaArchivosSolicitud({ archivos_json }) {
+  const [archivoPdfVisualizar, setArchivoPdfVisualizar] = useState(null);
   const archivos = parseArchivos(archivos_json);
+
   if (archivos.length === 0) {
     return (
       <Typography variant="body2" sx={{ color: "#757575" }}>
@@ -79,58 +104,178 @@ function ListaArchivosSolicitud({ archivos_json }) {
       </Typography>
     );
   }
+
   return (
-    <Stack spacing={0.75} alignItems="flex-start">
-      {archivos.map((a, idx) => (
-        <Box
-          key={`${a.nombre_archivo}-${idx}`}
-          sx={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 0.5,
-            maxWidth: "100%",
-          }}
-        >
-          <InsertDriveFile
-            sx={{
-              fontSize: 18,
-              color: "#1976D2",
-              flexShrink: 0,
-              mt: 0.15,
-            }}
-          />
-          <Box sx={{ minWidth: 0 }}>
-            <Link
-              href={a.ruta_archivo || "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              underline="hover"
+    <>
+      <Stack spacing={0.75} alignItems="flex-start">
+        {archivos.map((a, idx) => {
+          const esPdf = esArchivoPdf(a);
+          return (
+            <Box
+              key={`${a.nombre_archivo}-${idx}`}
               sx={{
-                color: "#616161",
-                fontSize: "0.8125rem",
-                wordBreak: "break-word",
-                display: "block",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 0.5,
+                maxWidth: "100%",
               }}
-              title={a.nombre_archivo}
             >
-              {a.nombre_archivo || "Archivo"}
-            </Link>
-            {a.tamano_archivo != null && (
-              <Typography
-                variant="caption"
+              <InsertDriveFile
                 sx={{
-                  color: "rgba(117, 117, 117, 0.72)",
-                  display: "block",
-                  mt: 0.25,
+                  fontSize: 18,
+                  color: "#1976D2",
+                  flexShrink: 0,
+                  mt: 0.15,
+                }}
+              />
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "#616161",
+                    fontSize: "0.8125rem",
+                    wordBreak: "break-word",
+                  }}
+                  title={a.nombre_archivo}
+                >
+                  {a.nombre_archivo || "Archivo"}
+                </Typography>
+                {a.tamano_archivo != null && (
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "rgba(117, 117, 117, 0.72)",
+                      display: "block",
+                      mt: 0.25,
+                    }}
+                  >
+                    {formatTamano(a.tamano_archivo)}
+                  </Typography>
+                )}
+              </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.25,
+                  flexShrink: 0,
                 }}
               >
-                {formatTamano(a.tamano_archivo)}
-              </Typography>
-            )}
+                {esPdf ? (
+                  <Tooltip title="Ver PDF">
+                    <IconButton
+                      size="small"
+                      onClick={() => setArchivoPdfVisualizar(a)}
+                      sx={{ color: "#1976D2" }}
+                      aria-label={`Ver ${a.nombre_archivo}`}
+                    >
+                      <Visibility sx={{ fontSize: 20 }} />
+                    </IconButton>
+                  </Tooltip>
+                ) : (
+                  <Tooltip title="Descargar archivo">
+                    <IconButton
+                      size="small"
+                      onClick={() =>
+                        descargarArchivoSolicitud(
+                          a.ruta_archivo,
+                          a.nombre_archivo,
+                        )
+                      }
+                      disabled={!a.ruta_archivo}
+                      sx={{ color: "#1976D2" }}
+                      aria-label={`Descargar ${a.nombre_archivo}`}
+                    >
+                      <Download sx={{ fontSize: 20 }} />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Box>
+            </Box>
+          );
+        })}
+      </Stack>
+
+      <Dialog
+        open={!!archivoPdfVisualizar}
+        onClose={() => setArchivoPdfVisualizar(null)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            border: "1px solid rgba(25, 118, 210, 0.16)",
+            borderRadius: 2,
+            height: "85vh",
+            display: "flex",
+            flexDirection: "column",
+          },
+        }}
+      >
+        <DialogTitle
+          component="div"
+          sx={{
+            color: "#1976D2",
+            fontWeight: 600,
+            fontSize: "1rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 1,
+            py: 1.5,
+          }}
+        >
+          <Box
+            component="span"
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {archivoPdfVisualizar?.nombre_archivo}
           </Box>
-        </Box>
-      ))}
-    </Stack>
+          <IconButton
+            size="small"
+            onClick={() => setArchivoPdfVisualizar(null)}
+            sx={{ color: "#757575", flexShrink: 0 }}
+            aria-label="Cerrar visor"
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent
+          dividers
+          sx={{ flex: 1, p: 0, overflow: "hidden", minHeight: 0 }}
+        >
+          {archivoPdfVisualizar?.ruta_archivo ? (
+            <iframe
+              src={archivoPdfVisualizar.ruta_archivo}
+              title={archivoPdfVisualizar.nombre_archivo}
+              style={{
+                width: "100%",
+                height: "100%",
+                minHeight: "60vh",
+                border: "none",
+              }}
+            />
+          ) : (
+            <Typography sx={{ p: 2, color: "#757575" }}>
+              No hay ruta de archivo disponible.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 2, py: 1 }}>
+          <Button
+            onClick={() => setArchivoPdfVisualizar(null)}
+            sx={{ color: "#1976D2", textTransform: "none" }}
+          >
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }
 
@@ -159,10 +304,17 @@ function esAprobacionPendiente(status) {
     .trim() === "pendiente";
 }
 
+function tipoIncluye(tipoAprobador, tipoBuscado) {
+  return String(tipoAprobador ?? "")
+    .split(/[,+]/)
+    .map((t) => t.trim())
+    .includes(tipoBuscado);
+}
+
 function existeJefeDirectoAprobadoEnFilas(aprobaciones) {
   return (aprobaciones || []).some(
     (a) =>
-      String(a.tipo_aprobador ?? "").trim() === "jefe_directo" &&
+      tipoIncluye(a.tipo_aprobador, "jefe_directo") &&
       String(a.status || "")
         .toLowerCase()
         .trim() === "aprobado",
@@ -173,7 +325,11 @@ function existeJefeDirectoAprobadoEnFilas(aprobaciones) {
 function adminPuedeAprobarAusencia(aprobacion, todasAprobaciones) {
   if (!esAprobacionPendiente(aprobacion.status)) return false;
   const tipo = String(aprobacion.tipo_aprobador ?? "").trim();
-  if (tipo === "responsable_area" || tipo === "forzado") {
+  if (tipoIncluye(tipo, "jefe_directo")) return true;
+  if (
+    tipoIncluye(tipo, "responsable_area") ||
+    tipoIncluye(tipo, "forzado")
+  ) {
     return existeJefeDirectoAprobadoEnFilas(todasAprobaciones);
   }
   return true;
@@ -199,12 +355,40 @@ export function esEstadoRechazada(estado) {
   return e === "rechazada" || e === "rechazado";
 }
 
+export function esEstadoObsoleta(estado) {
+  return esEstadoObsoletaValor(estado);
+}
+
 function labelEstadoChip(estado) {
   const e = String(estado || "").toLowerCase();
   if (e === "aprobada" || e === "aprobado") return "Aprobado";
   if (e === "rechazada" || e === "rechazado") return "Rechazado";
+  if (e === "obsoleta") return "Obsoleta";
   if (e === "pendiente") return "Pendiente";
   return estado || "—";
+}
+
+function colorEstadoSolicitudChip(estado) {
+  const e = String(estado || "").toLowerCase();
+  if (e === "pendiente") return "#FB8500";
+  if (e === "aprobada" || e === "aprobado") return "#1B5E20";
+  if (e === "rechazada" || e === "rechazado") return "#C62828";
+  if (e === "obsoleta") return "#5D4037";
+  return "#757575";
+}
+
+function buildSolicitudesListUrl({ misSolicitudes, empId, mostrarObsoletas }) {
+  const params = new URLSearchParams();
+  if (misSolicitudes && empId) {
+    params.set("solicitante_emp_id", empId);
+  } else if (empId) {
+    params.set("for_emp_id", empId);
+  }
+  if (mostrarObsoletas) {
+    params.set("mostrar_obsoletas", "true");
+  }
+  const q = params.toString();
+  return q ? `/api/solicitudes?${q}` : "/api/solicitudes";
 }
 
 function backgroundEstadoAprobacion(status) {
@@ -218,12 +402,18 @@ function backgroundEstadoAprobacion(status) {
 }
 
 function labelTipoAprobador(tipo) {
-  const t = String(tipo ?? "").trim();
-  if (t === "jefe_directo") return "Jefe directo";
-  if (t === "responsable_area") return "Responsable de área";
-  if (t === "forzado") return "Requerido";
-  if (!t) return "—";
-  return t;
+  const tipos = String(tipo ?? "")
+    .split(/[,+]/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+  if (tipos.length === 0) return "—";
+  const labels = tipos.map((t) => {
+    if (t === "jefe_directo") return "Jefe directo";
+    if (t === "responsable_area") return "Responsable de área";
+    if (t === "forzado") return "Requerido";
+    return t;
+  });
+  return [...new Set(labels)].join(", ");
 }
 
 /**
@@ -279,6 +469,10 @@ function Solicitudes({ misSolicitudes = false }) {
   const [solicitudAEditar, setSolicitudAEditar] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminAusenciaLoadingId, setAdminAusenciaLoadingId] = useState(null);
+  const [mostrarObsoletas, setMostrarObsoletas] = useState(false);
+
+  const aplicarFilasListado = (data, mostrarObs) =>
+    filtrarSolicitudesPorObsoletas(data.data || [], mostrarObs);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -293,8 +487,12 @@ function Solicitudes({ misSolicitudes = false }) {
           setRows([]);
           return;
         }
-        const url = `/api/solicitudes?solicitante_emp_id=${encodeURIComponent(empId)}`;
-        const res = await fetch(url);
+        const url = buildSolicitudesListUrl({
+          misSolicitudes: true,
+          empId,
+          mostrarObsoletas,
+        });
+        const res = await fetch(url, { cache: "no-store" });
         const data = await res.json();
         if (!res.ok) {
           setError(data.error || "No se pudieron cargar sus solicitudes");
@@ -302,16 +500,18 @@ function Solicitudes({ misSolicitudes = false }) {
           return;
         }
         setSchemaFase2Pendiente(Boolean(data.schema_fase2_pendiente));
-        setRows(data.data || []);
+        setRows(aplicarFilasListado(data, mostrarObsoletas));
         return;
       }
 
-      const url = empId
-        ? `/api/solicitudes?for_emp_id=${encodeURIComponent(empId)}`
-        : "/api/solicitudes";
+      const url = buildSolicitudesListUrl({
+        misSolicitudes: false,
+        empId,
+        mostrarObsoletas,
+      });
       if (!empId) setSinEmpEnSesion(true);
 
-      const res = await fetch(url);
+      const res = await fetch(url, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || "No se pudieron cargar las solicitudes");
@@ -319,14 +519,14 @@ function Solicitudes({ misSolicitudes = false }) {
         return;
       }
       setSchemaFase2Pendiente(Boolean(data.schema_fase2_pendiente));
-      setRows(data.data || []);
+      setRows(aplicarFilasListado(data, mostrarObsoletas));
     } catch (e) {
       setError("Error de conexión");
       setRows([]);
     } finally {
       setLoading(false);
     }
-  }, [misSolicitudes]);
+  }, [misSolicitudes, mostrarObsoletas]);
 
   useEffect(() => {
     load();
@@ -460,6 +660,45 @@ function Solicitudes({ misSolicitudes = false }) {
     setAdminAusenciaLoadingId(null);
   };
 
+  const marcarSolicitudObsoleta = async (id_solicitud) => {
+    if (
+      !window.confirm(
+        "¿Marcar esta solicitud como obsoleta? Dejará de mostrarse en el listado habitual.",
+      )
+    ) {
+      return;
+    }
+    setActionId(id_solicitud);
+    setBanner(null);
+    try {
+      const res = await fetch(`/api/solicitudes/${id_solicitud}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accion: "marcar_obsoleta",
+          is_admin: true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setBanner({
+          severity: "error",
+          text: data.error || "No se pudo marcar como obsoleta",
+        });
+        return;
+      }
+      setBanner({
+        severity: "success",
+        text: data.message || "Solicitud marcada como obsoleta",
+      });
+      await load();
+    } catch {
+      setBanner({ severity: "error", text: "Error de conexión" });
+    } finally {
+      setActionId(null);
+    }
+  };
+
   const adminAprobarAusencia = async (id_aprobacion) => {
     const empId = getMiEmpId();
     if (!empId) {
@@ -502,12 +741,11 @@ function Solicitudes({ misSolicitudes = false }) {
       await load();
       const idSol = dialogAprobacionesId;
       const empIdList = getMiEmpId();
-      let url = "/api/solicitudes";
-      if (misSolicitudes && empIdList) {
-        url = `/api/solicitudes?solicitante_emp_id=${encodeURIComponent(empIdList)}`;
-      } else if (empIdList) {
-        url = `/api/solicitudes?for_emp_id=${encodeURIComponent(empIdList)}`;
-      }
+      const url = buildSolicitudesListUrl({
+        misSolicitudes,
+        empId: empIdList,
+        mostrarObsoletas,
+      });
       const resList = await fetch(url);
       const listData = await resList.json();
       if (resList.ok && Array.isArray(listData.data)) {
@@ -604,6 +842,27 @@ function Solicitudes({ misSolicitudes = false }) {
             {banner.text}
           </Alert>
         )}
+
+        <FormControlLabel
+          control={
+            <Switch
+              checked={mostrarObsoletas}
+              onChange={(e) => setMostrarObsoletas(e.target.checked)}
+              sx={{
+                "& .MuiSwitch-switchBase.Mui-checked": { color: "#1976D2" },
+                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                  backgroundColor: "#1976D2",
+                },
+              }}
+            />
+          }
+          label={
+            <Typography variant="body2" sx={{ color: "#616161" }}>
+              Mostrar obsoletas
+            </Typography>
+          }
+          sx={{ mb: 2, ml: 0 }}
+        />
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -707,14 +966,9 @@ function Solicitudes({ misSolicitudes = false }) {
                             label={labelEstadoChip(r.estado)}
                             sx={{
                               ...chipPillBase,
-                              backgroundColor:
-                                r.estado === "pendiente"
-                                  ? "#FB8500"
-                                  : r.estado === "aprobada" ||
-                                      String(r.estado).toLowerCase() ===
-                                        "aprobado"
-                                    ? "#1B5E20"
-                                    : "#C62828",
+                              backgroundColor: colorEstadoSolicitudChip(
+                                r.estado,
+                              ),
                             }}
                           />
                         </TableCell>
@@ -793,6 +1047,31 @@ function Solicitudes({ misSolicitudes = false }) {
                                 </IconButton>
                               </span>
                             </Tooltip>
+                            {isAdmin && !esEstadoObsoleta(r.estado) && (
+                              <Tooltip title="Marcar como obsoleta">
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    disabled={actionId !== null}
+                                    onClick={() =>
+                                      marcarSolicitudObsoleta(r.id_solicitud)
+                                    }
+                                    sx={{ color: "#5D4037" }}
+                                    aria-label="Marcar solicitud como obsoleta"
+                                  >
+                                    {actionId === r.id_solicitud ? (
+                                      <CircularProgress
+                                        size={22}
+                                        thickness={5}
+                                        sx={{ color: "#5D4037" }}
+                                      />
+                                    ) : (
+                                      <Archive sx={{ fontSize: 22 }} />
+                                    )}
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                            )}
                             {misSolicitudes && esEstadoRechazada(r.estado) && (
                               <Tooltip title="Editar y reenviar a aprobación">
                                 <span>

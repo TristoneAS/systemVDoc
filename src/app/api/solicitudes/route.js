@@ -9,6 +9,10 @@ import {
   notificarJefeDirectoSolicitudCreada,
   resolveAppBaseUrl,
 } from "@/libs/notificar_aprobadores_solicitud";
+import {
+  filtrarSolicitudesPorObsoletas,
+  sqlExcluirObsoletas,
+} from "@/libs/solicitudes_estado";
 import fs from "fs";
 import path from "path";
 
@@ -45,12 +49,23 @@ export async function GET(request) {
     const solicitanteEmpId = String(
       searchParams.get("solicitante_emp_id") || "",
     ).trim();
+    const mostrarObsoletas =
+      searchParams.get("mostrar_obsoletas") === "true" ||
+      searchParams.get("mostrar_obsoletas") === "1";
 
-    let sql = `SELECT * FROM solicitudes`;
+    const whereParts = [];
     const sqlParams = [];
     if (solicitanteEmpId) {
-      sql += ` WHERE TRIM(COALESCE(emp_id_solicitante, '')) = ?`;
+      whereParts.push(`TRIM(COALESCE(emp_id_solicitante, '')) = ?`);
       sqlParams.push(solicitanteEmpId);
+    }
+    if (!mostrarObsoletas) {
+      whereParts.push(sqlExcluirObsoletas());
+    }
+
+    let sql = `SELECT * FROM solicitudes`;
+    if (whereParts.length > 0) {
+      sql += ` WHERE ${whereParts.join(" AND ")}`;
     }
     sql += ` ORDER BY fecha_creacion DESC`;
 
@@ -71,11 +86,15 @@ export async function GET(request) {
              AND TRIM(a.emp_id) = ?
              AND a.status = 'pendiente'
              AND (
-               IFNULL(a.tipo_aprobador, '') NOT IN ('responsable_area', 'forzado')
+               a.tipo_aprobador LIKE '%jefe_directo%'
+               OR (
+                 a.tipo_aprobador NOT LIKE '%forzado%'
+                 AND a.tipo_aprobador NOT LIKE '%responsable_area%'
+               )
                OR EXISTS (
                  SELECT 1 FROM aprobaciones j
                  WHERE j.id_solicitud = a.id_solicitud
-                   AND j.tipo_aprobador = 'jefe_directo'
+                   AND j.tipo_aprobador LIKE '%jefe_directo%'
                    AND j.status = 'aprobado'
                )
              )`,
@@ -91,17 +110,20 @@ export async function GET(request) {
       }
     }
 
-    const data = rows.map((r) => {
-      const puedo =
-        Boolean(forEmpId) &&
-        r.estado === "pendiente" &&
-        solicitudesDondePuedoActuar.has(r.id_solicitud);
-      return {
-        ...r,
-        puede_aprobar: puedo,
-        puede_rechazar: puedo,
-      };
-    });
+    const data = filtrarSolicitudesPorObsoletas(
+      rows.map((r) => {
+        const puedo =
+          Boolean(forEmpId) &&
+          r.estado === "pendiente" &&
+          solicitudesDondePuedoActuar.has(r.id_solicitud);
+        return {
+          ...r,
+          puede_aprobar: puedo,
+          puede_rechazar: puedo,
+        };
+      }),
+      mostrarObsoletas,
+    );
 
     return NextResponse.json({ success: true, data });
   } catch (error) {

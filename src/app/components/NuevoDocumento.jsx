@@ -32,6 +32,7 @@ import {
   Slideshow,
 } from "@mui/icons-material";
 import HexagonMenu from "./HexagonMenu";
+import ModalConfirmarCorreoAprobadores from "./ModalConfirmarCorreoAprobadores";
 import { getSolicitanteParaSolicitud } from "./Solicitudes";
 
 const steps = ["Información Básica", "Cargar Archivos"];
@@ -61,6 +62,8 @@ function NuevoDocumento({
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [modalCorreoOpen, setModalCorreoOpen] = useState(false);
+  const [previewCorreoParams, setPreviewCorreoParams] = useState(null);
   const [areas, setAreas] = useState([]);
   const [areasLoading, setAreasLoading] = useState(true);
 
@@ -218,6 +221,29 @@ function NuevoDocumento({
       return <Slideshow sx={{ color: "#1976D2" }} />;
     }
     return <InsertDriveFile />;
+  };
+
+  const handleAbrirConfirmacionCorreo = () => {
+    setSubmitError("");
+    if (!validateStep1()) {
+      setSubmitError("Complete o corrija la información básica");
+      setActiveStep(0);
+      return;
+    }
+    if (!validateStep2()) return;
+    const { emp_id_solicitante } = getSolicitanteParaSolicitud();
+    if (!emp_id_solicitante?.trim()) {
+      setSubmitError(
+        "No se encontró emp_id en la sesión (infoUser). Vuelva a iniciar sesión.",
+      );
+      return;
+    }
+    setPreviewCorreoParams({
+      emp_id_solicitante: emp_id_solicitante.trim(),
+      id_area: formData.id_area,
+      id_documento: formData.id_documento || "",
+    });
+    setModalCorreoOpen(true);
   };
 
   const handleSubmit = async () => {
@@ -929,7 +955,7 @@ function NuevoDocumento({
         {activeStep === steps.length - 1 ? (
           <Button
             variant="contained"
-            onClick={handleSubmit}
+            onClick={saveAsSolicitud ? handleAbrirConfirmacionCorreo : handleSubmit}
             disabled={loading}
             sx={{
               backgroundColor: loading ? "#E0E0E0" : "#E3F2FD",
@@ -983,6 +1009,19 @@ function NuevoDocumento({
           </Button>
         )}
       </Box>
+
+      {saveAsSolicitud && (
+        <ModalConfirmarCorreoAprobadores
+          open={modalCorreoOpen}
+          onClose={() => setModalCorreoOpen(false)}
+          onConfirm={async () => {
+            setModalCorreoOpen(false);
+            await handleSubmit();
+          }}
+          previewParams={previewCorreoParams}
+          confirming={loading}
+        />
+      )}
     </Paper>
   );
 

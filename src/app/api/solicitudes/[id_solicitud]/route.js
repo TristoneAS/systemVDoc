@@ -11,6 +11,8 @@ import {
   existeJefeDirectoAprobado,
   TIPO_APROBADOR_JEFE_DIRECTO,
   reiniciarAprobacionesSolicitud,
+  aprobarTodasPendientesDelActor,
+  incluyeTipoAprobador,
 } from "@/libs/aprobaciones";
 import fs from "fs";
 import path from "path";
@@ -25,6 +27,7 @@ import {
   notificarSolicitanteSolicitudAprobada,
   notificarSolicitanteSolicitudRechazada,
 } from "@/libs/notificar_solicitante_solicitud";
+import { esEstadoObsoletaValor } from "@/libs/solicitudes_estado";
 
 const UPLOAD_DOCS = path.join(process.cwd(), "public", "uploads", "documentos");
 const UPLOAD_SOLICITUDES = path.join(
@@ -257,12 +260,15 @@ async function procesarVistoBueno(
   filaPend,
   comentario,
 ) {
-  const [updResult] = await connection.query(
-    `UPDATE aprobaciones SET status = ?, comentario = ? WHERE id = ? AND status = 'pendiente'`,
-    [STATUS_APROBACION_APROBADO, comentario, filaPend.id],
+  const empIdActor = normalizeEmpId(filaPend.emp_id);
+  const afectadas = await aprobarTodasPendientesDelActor(
+    connection,
+    id_solicitud,
+    empIdActor,
+    comentario,
   );
 
-  if (!updResult.affectedRows) {
+  if (!afectadas) {
     return {
       error:
         "No tiene una aprobación pendiente para esta solicitud o ya registró su visto bueno.",
@@ -280,7 +286,7 @@ async function procesarVistoBueno(
 
   if (sol.estado !== "aprobada") {
     let notificacionCorreo = null;
-    if (filaPend.tipo_aprobador === TIPO_APROBADOR_JEFE_DIRECTO) {
+    if (incluyeTipoAprobador(filaPend.tipo_aprobador, TIPO_APROBADOR_JEFE_DIRECTO)) {
       try {
         notificacionCorreo = await notificarDemasAprobadoresTrasJefe(
           connection,
@@ -328,10 +334,79 @@ export async function PATCH(request, { params }) {
   }
 
   const accion = body.accion;
+
+  if (accion === "marcar_obsoleta") {
+    if (body.is_admin !== true) {
+      return NextResponse.json(
+        { error: "Solo un administrador puede marcar solicitudes como obsoletas." },
+        { status: 403 },
+      );
+    }
+
+    const [rowsObs] = await conn.query(
+      `SELECT id_solicitud, estado FROM solicitudes WHERE id_solicitud = ?`,
+      [id_solicitud],
+    );
+    if (rowsObs.length === 0) {
+      return NextResponse.json(
+        { error: "Solicitud no encontrada" },
+        { status: 404 },
+      );
+    }
+
+    if (esEstadoObsoletaValor(rowsObs[0].estado)) {
+      return NextResponse.json({
+        success: true,
+        message: "La solicitud ya está marcada como obsoleta",
+      });
+    }
+
+    try {
+      await conn.query(
+        `UPDATE solicitudes SET estado = 'obsoleta', fecha_resolucion = NOW() WHERE id_solicitud = ?`,
+        [id_solicitud],
+      );
+    } catch (updErr) {
+      console.error("Error al guardar estado obsoleta:", updErr);
+      return NextResponse.json(
+        {
+          error:
+            "No se pudo guardar el estado obsoleta. Ejecute database/alter_solicitudes_estado_obsoleta.sql en la base de datos.",
+          details: updErr.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const [verificado] = await conn.query(
+      `SELECT estado FROM solicitudes WHERE id_solicitud = ?`,
+      [id_solicitud],
+    );
+    if (!esEstadoObsoletaValor(verificado[0]?.estado)) {
+      return NextResponse.json(
+        {
+          error:
+            "El estado no se guardó como obsoleta (revise el ENUM de la columna estado). Ejecute database/alter_solicitudes_estado_obsoleta.sql.",
+          details: `Valor actual en BD: "${verificado[0]?.estado ?? ""}"`,
+        },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Solicitud marcada como obsoleta",
+      data: { id_solicitud, estado: "obsoleta" },
+    });
+  }
+
   const esAprobarAusencia = accion === "aprobar_ausencia";
   if (accion !== "aprobar" && accion !== "rechazar" && !esAprobarAusencia) {
     return NextResponse.json(
-      { error: "accion debe ser aprobar, rechazar o aprobar_ausencia" },
+      {
+        error:
+          "accion debe ser aprobar, rechazar, aprobar_ausencia o marcar_obsoleta",
+      },
       { status: 400 },
     );
   }
@@ -494,7 +569,7 @@ export async function PATCH(request, { params }) {
         );
       }
       const [apRows] = await connection.query(
-        `SELECT id, tipo_aprobador, status FROM aprobaciones
+        `SELECT id, emp_id, tipo_aprobador, status FROM aprobaciones
          WHERE id = ? AND id_solicitud = ?`,
         [id_aprobacion, id_solicitud],
       );

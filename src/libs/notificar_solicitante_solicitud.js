@@ -1,10 +1,6 @@
 import { empleados } from "@/libs/empleados";
 import { isValidEmail, sendMailMessage } from "@/libs/mailer";
-import {
-  TIPO_APROBADOR_FORZADO,
-  TIPO_APROBADOR_JEFE_DIRECTO,
-  TIPO_APROBADOR_RESPONSABLE_AREA,
-} from "@/libs/aprobaciones";
+import { labelTiposAprobador } from "@/libs/aprobaciones";
 
 const BRAND_ORANGE = "#e67e22";
 const COLOR_APROBADO = "#1B5E20";
@@ -34,11 +30,7 @@ function labelTipoSolicitud(tipo) {
 }
 
 function labelRolAprobador(tipo) {
-  const t = String(tipo ?? "").trim();
-  if (t === TIPO_APROBADOR_JEFE_DIRECTO) return "Jefe directo";
-  if (t === TIPO_APROBADOR_RESPONSABLE_AREA) return "Responsable del área";
-  if (t === TIPO_APROBADOR_FORZADO) return "Requerido";
-  return "Aprobador";
+  return labelTiposAprobador(tipo);
 }
 
 function labelEstadoAprobacion(status) {
@@ -78,10 +70,10 @@ async function cargarAprobacionesParaCorreo(connection, idSolicitud) {
     `SELECT emp_id, emp_nombre, emp_correo, tipo_aprobador, status, comentario
      FROM aprobaciones
      WHERE id_solicitud = ?
-     ORDER BY CASE COALESCE(tipo_aprobador, '')
-       WHEN 'jefe_directo' THEN 1
-       WHEN 'forzado' THEN 2
-       WHEN 'responsable_area' THEN 3
+     ORDER BY CASE
+       WHEN tipo_aprobador LIKE '%jefe_directo%' THEN 1
+       WHEN tipo_aprobador LIKE '%forzado%' THEN 2
+       WHEN tipo_aprobador LIKE '%responsable_area%' THEN 3
        ELSE 4 END,
        emp_nombre ASC`,
     [idSolicitud],

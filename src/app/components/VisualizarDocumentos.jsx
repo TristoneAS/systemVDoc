@@ -44,6 +44,7 @@ import {
 } from "@mui/icons-material";
 import HexagonMenu from "./HexagonMenu";
 import { getIsAdmin } from "./Solicitudes";
+import { normalizeArchivosDocumento } from "@/libs/normalize_archivos_documento";
 
 function normalizarEstadoDocumento(estado) {
   const e = String(estado ?? "activo")
@@ -146,16 +147,24 @@ function VisualizarDocumentos() {
   const handleVerDetalles = async (idDocumento) => {
     try {
       const response = await fetch(
-        `/api/documentos?id_documento=${idDocumento}`,
+        `/api/documentos?id_documento=${encodeURIComponent(String(idDocumento))}`,
       );
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.error || "Error al cargar detalles del documento");
+        alert(
+          data.error ||
+            data.details ||
+            "Error al cargar detalles del documento",
+        );
         return;
       }
 
-      setSelectedDocumento(data.data);
+      const doc = data.data;
+      setSelectedDocumento({
+        ...doc,
+        archivos: normalizeArchivosDocumento(doc?.archivos),
+      });
       setOpenDialog(true);
     } catch (error) {
       console.error("Error al cargar detalles:", error);

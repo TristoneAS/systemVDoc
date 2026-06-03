@@ -36,6 +36,7 @@ import {
 } from "@mui/icons-material";
 import HexagonMenu from "./HexagonMenu";
 import NuevoDocumento from "./NuevoDocumento";
+import ModalConfirmarCorreoAprobadores from "./ModalConfirmarCorreoAprobadores";
 import { getSolicitanteParaSolicitud } from "./Solicitudes";
 
 const textFieldSx = {
@@ -76,6 +77,8 @@ function SolicitudCambioDocumento({ onVolver }) {
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [modalCorreoOpen, setModalCorreoOpen] = useState(false);
+  const [previewCorreoParams, setPreviewCorreoParams] = useState(null);
 
   useEffect(() => {
     try {
@@ -239,6 +242,23 @@ function SolicitudCambioDocumento({ onVolver }) {
       return <Slideshow sx={{ color: "#1976D2" }} />;
     }
     return <InsertDriveFile />;
+  };
+
+  const handleAbrirConfirmacionCorreo = () => {
+    if (!validateStep1()) return;
+    const { emp_id_solicitante } = getSolicitanteParaSolicitud();
+    if (!emp_id_solicitante?.trim()) {
+      setSubmitError(
+        "No hay emp_id del solicitante en la sesión (infoUser). Inicie sesión de nuevo.",
+      );
+      return;
+    }
+    setPreviewCorreoParams({
+      emp_id_solicitante: emp_id_solicitante.trim(),
+      id_area: documentoSeleccionado?.id_area ?? "",
+      id_documento: documentoSeleccionado?.id_documento ?? "",
+    });
+    setModalCorreoOpen(true);
   };
 
   const handleSubmit = async () => {
@@ -719,7 +739,7 @@ function SolicitudCambioDocumento({ onVolver }) {
         {activeStep === stepsCambio.length - 1 ? (
           <Button
             variant="contained"
-            onClick={handleSubmit}
+            onClick={handleAbrirConfirmacionCorreo}
             disabled={loading}
             sx={{
               backgroundColor: loading ? "#E0E0E0" : "#E3F2FD",
@@ -765,6 +785,17 @@ function SolicitudCambioDocumento({ onVolver }) {
           </Button>
         )}
       </Box>
+
+      <ModalConfirmarCorreoAprobadores
+        open={modalCorreoOpen}
+        onClose={() => setModalCorreoOpen(false)}
+        onConfirm={async () => {
+          setModalCorreoOpen(false);
+          await handleSubmit();
+        }}
+        previewParams={previewCorreoParams}
+        confirming={loading}
+      />
     </Paper>
   );
 }

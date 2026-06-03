@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { conn } from "@/libs/system_v_docs";
+import { obtenerDocumentoConArchivos } from "@/libs/documento_detalle";
 import fs from "fs";
 import path from "path";
 
@@ -17,32 +18,9 @@ export async function GET(request, { params }) {
       );
     }
 
-    // Obtener documento con sus archivos
-    const [documento] = await conn.query(
-      `SELECT d.*,
-       MAX(ar.area_nombre) AS area_nombre,
-       COALESCE(
-         JSON_ARRAYAGG(
-           JSON_OBJECT(
-             'id_archivo', a.id_archivo,
-             'nombre_archivo', a.nombre_archivo,
-             'ruta_archivo', a.ruta_archivo,
-             'tipo_archivo', a.tipo_archivo,
-             'tamano_archivo', a.tamano_archivo,
-             'fecha_subida', a.fecha_subida
-           )
-         ),
-         JSON_ARRAY()
-       ) AS archivos
-       FROM documentos d
-       LEFT JOIN areas ar ON d.id_area = ar.id_area
-       LEFT JOIN archivos_documentos a ON d.id_documento = a.id_documento
-       WHERE d.id_documento = ?
-       GROUP BY d.id_documento`,
-      [id_documento],
-    );
+    const documento = await obtenerDocumentoConArchivos(id_documento);
 
-    if (documento.length === 0) {
+    if (!documento) {
       return NextResponse.json(
         { error: "Documento no encontrado" },
         { status: 404 },
@@ -51,7 +29,7 @@ export async function GET(request, { params }) {
 
     return NextResponse.json({
       success: true,
-      data: documento[0],
+      data: documento,
     });
   } catch (error) {
     console.error("Error al obtener documento:", error);

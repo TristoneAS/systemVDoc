@@ -2,6 +2,7 @@ import {
   TIPO_APROBADOR_FORZADO,
   TIPO_APROBADOR_JEFE_DIRECTO,
   TIPO_APROBADOR_RESPONSABLE_AREA,
+  labelTiposAprobador,
 } from "@/libs/aprobaciones";
 import { isValidEmail, sendMailMessage } from "@/libs/mailer";
 
@@ -42,11 +43,7 @@ function textoIntroTipo(tipo, segundaFase = false) {
 }
 
 function labelRolAprobador(tipo) {
-  const t = String(tipo ?? "").trim();
-  if (t === TIPO_APROBADOR_JEFE_DIRECTO) return "Jefe directo";
-  if (t === TIPO_APROBADOR_RESPONSABLE_AREA) return "Responsable del área";
-  if (t === TIPO_APROBADOR_FORZADO) return "Requerido";
-  return "Aprobador";
+  return labelTiposAprobador(tipo);
 }
 
 function celdaEtiqueta(etiqueta, par = false) {
@@ -285,12 +282,15 @@ async function enviarCorreosAprobadores(
     return resultado;
   }
 
-  const placeholders = tiposIncluidos.map(() => "?").join(",");
-  const params = [idSolicitud, ...tiposIncluidos];
+  const tipoLike = tiposIncluidos.map(() => "tipo_aprobador LIKE ?").join(" OR ");
+  const params = [
+    idSolicitud,
+    ...tiposIncluidos.map((t) => `%${t}%`),
+  ];
   let sql = `SELECT emp_id, emp_nombre, emp_correo, tipo_aprobador
      FROM aprobaciones
      WHERE id_solicitud = ?
-       AND tipo_aprobador IN (${placeholders})`;
+       AND (${tipoLike})`;
   if (soloPendientes) {
     sql += ` AND status = 'pendiente'`;
   }
