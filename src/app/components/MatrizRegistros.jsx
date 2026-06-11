@@ -93,10 +93,6 @@ function MatrizRegistros() {
         >
           Matriz de registros
         </Typography>
-        <Typography variant="body2" sx={{ color: "#757575", mb: 3 }}>
-          Consulta del catálogo: nomenclatura, nombre, responsable del área
-          (areas.emp_nombre por documentos.id_area), área, retención y ubicación.
-        </Typography>
 
         <TextField
           fullWidth

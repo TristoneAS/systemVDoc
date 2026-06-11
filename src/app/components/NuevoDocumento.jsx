@@ -34,6 +34,12 @@ import {
 import HexagonMenu from "./HexagonMenu";
 import ModalConfirmarCorreoAprobadores from "./ModalConfirmarCorreoAprobadores";
 import { getSolicitanteParaSolicitud } from "./Solicitudes";
+import FormSection, {
+  textFieldSx,
+  disabledFieldSx,
+  sectionTitleSx,
+  stepperSx,
+} from "./FormSection";
 
 const steps = ["Información Básica", "Cargar Archivos"];
 
@@ -107,10 +113,7 @@ function NuevoDocumento({
 
   const handleInputChange = (field, value) => {
     let nextValue = value;
-    if (
-      saveAsSolicitud &&
-      (field === "nomenclatura" || field === "confirmar_nomenclatura")
-    ) {
+    if (field === "nomenclatura" || field === "confirmar_nomenclatura") {
       nextValue = value.toUpperCase();
     }
     setFormData((prev) => ({
@@ -360,350 +363,211 @@ function NuevoDocumento({
     switch (step) {
       case 0:
         return (
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="ID Documento"
-                value={formData.id_documento}
-                disabled
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#FFFFFF",
-                    color: "#212121",
-                    "& fieldset": {
-                      borderColor: "rgba(25, 118, 210, 0.16)",
-                    },
-                    "& .MuiInputBase-input": {
-                      color: "#212121 !important",
-                    },
-                    "& .MuiInputBase-input.Mui-disabled": {
-                      WebkitTextFillColor: "#212121 !important",
-                      color: "#212121 !important",
-                    },
-                  },
-                  "& .MuiInputLabel-root": {
-                    color: "#757575",
-                  },
-                  "& .MuiFormHelperText-root": {
-                    color: "#757575",
-                  },
-                }}
-                helperText="Consecutivo automatico"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Fecha de Alta"
-                type="date"
-                value={formData.fecha_alta}
-                disabled
-                InputLabelProps={{
-                  shrink: true,
-                }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#FFFFFF",
-                    color: "#212121",
-                    "& fieldset": {
-                      borderColor: "rgba(25, 118, 210, 0.16)",
-                    },
-                    "& .MuiInputBase-input": {
-                      color: "#212121 !important",
-                    },
-                    "& .MuiInputBase-input.Mui-disabled": {
-                      WebkitTextFillColor: "#212121 !important",
-                      color: "#212121 !important",
-                    },
-                  },
-                  "& .MuiInputLabel-root": {
-                    color: "#757575",
-                  },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Nomenclatura"
-                value={formData.nomenclatura}
-                onChange={(e) =>
-                  handleInputChange("nomenclatura", e.target.value)
-                }
-                error={!!errors.nomenclatura}
-                helperText={errors.nomenclatura}
-                required
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#FFFFFF",
-                    color: "#212121",
-                    "& fieldset": {
-                      borderColor: "rgba(25, 118, 210, 0.16)",
-                    },
-                    "&:hover fieldset": {
-                      borderColor: "#1976D2",
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: "#1976D2",
-                    },
-                    "& .MuiInputBase-input": {
-                      color: "#212121",
-                    },
-                  },
-                  "& .MuiInputLabel-root": {
-                    color: "#757575",
-                    "&.Mui-focused": {
-                      color: "#1976D2",
-                    },
-                  },
-                  "& .MuiFormHelperText-root": {
-                    color: errors.nomenclatura ? "#b91c1c" : "#757575",
-                  },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Confirmar Código de Nomenclatura"
-                value={formData.confirmar_nomenclatura}
-                onChange={(e) =>
-                  handleInputChange("confirmar_nomenclatura", e.target.value)
-                }
-                error={!!errors.confirmar_nomenclatura}
-                helperText={errors.confirmar_nomenclatura}
-                required
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#FFFFFF",
-                    color: "#212121",
-                    "& fieldset": {
-                      borderColor: "rgba(25, 118, 210, 0.16)",
-                    },
-                    "&:hover fieldset": {
-                      borderColor: "#1976D2",
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: "#1976D2",
-                    },
-                    "& .MuiInputBase-input": {
-                      color: "#212121",
-                    },
-                  },
-                  "& .MuiInputLabel-root": {
-                    color: "#757575",
-                    "&.Mui-focused": {
-                      color: "#1976D2",
-                    },
-                  },
-                  "& .MuiFormHelperText-root": {
-                    color: errors.confirmar_nomenclatura
-                      ? "#b91c1c"
-                      : "#757575",
-                  },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl
-                fullWidth
-                required
-                error={!!errors.id_area}
-                disabled={areasLoading}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#FFFFFF",
-                    color: "#212121",
-                    "& fieldset": {
-                      borderColor: "rgba(25, 118, 210, 0.16)",
-                    },
-                    "&:hover fieldset": {
-                      borderColor: "#1976D2",
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: "#1976D2",
-                    },
-                    "& .MuiSelect-icon": { color: "#757575" },
-                  },
-                  "& .MuiInputLabel-root": {
-                    color: "#757575",
-                    "&.Mui-focused": { color: "#1976D2" },
-                  },
-                }}
-              >
-                <InputLabel id="nuevo-doc-id-area-label">Área</InputLabel>
-                <Select
-                  labelId="nuevo-doc-id-area-label"
-                  label="Área"
-                  value={
-                    formData.id_area === "" ? "" : String(formData.id_area)
-                  }
-                  onChange={(e) => handleInputChange("id_area", e.target.value)}
-                >
-                  <MenuItem value="">
-                    <em>Seleccione un área</em>
-                  </MenuItem>
-                  {areas.map((a) => (
-                    <MenuItem key={a.id_area} value={String(a.id_area)}>
-                      {a.area_nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {errors.id_area ? (
-                  <FormHelperText sx={{ color: "#b91c1c" }}>
-                    {errors.id_area}
-                  </FormHelperText>
-                ) : areasLoading ? (
-                  <FormHelperText sx={{ color: "#757575" }}>
-                    Cargando áreas…
-                  </FormHelperText>
-                ) : (
-                  <FormHelperText sx={{ color: "#757575" }}>
-                    Seleccione el area responsable del documento
-                  </FormHelperText>
-                )}
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Nombre del Documento"
-                value={formData.nombre_documento}
-                onChange={(e) =>
-                  handleInputChange("nombre_documento", e.target.value)
-                }
-                error={!!errors.nombre_documento}
-                helperText={errors.nombre_documento}
-                required
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#FFFFFF",
-                    color: "#212121",
-                    "& fieldset": {
-                      borderColor: "rgba(25, 118, 210, 0.16)",
-                    },
-                    "&:hover fieldset": {
-                      borderColor: "#1976D2",
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: "#1976D2",
-                    },
-                    "& .MuiInputBase-input": {
-                      color: "#212121",
-                    },
-                  },
-                  "& .MuiInputLabel-root": {
-                    color: "#757575",
-                    "&.Mui-focused": {
-                      color: "#1976D2",
-                    },
-                  },
-                  "& .MuiFormHelperText-root": {
-                    color: errors.nombre_documento ? "#b91c1c" : "#757575",
-                  },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Tiempo de retención"
-                value={formData.tiempo_retencion}
-                onChange={(e) =>
-                  handleInputChange("tiempo_retencion", e.target.value)
-                }
-                inputProps={{ maxLength: 200 }}
-                helperText="Opcional · máx. 200 caracteres"
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#FFFFFF",
-                    color: "#212121",
-                    "& fieldset": {
-                      borderColor: "rgba(25, 118, 210, 0.16)",
-                    },
-                    "&:hover fieldset": {
-                      borderColor: "#1976D2",
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: "#1976D2",
-                    },
-                    "& .MuiInputBase-input": {
-                      color: "#212121",
-                    },
-                  },
-                  "& .MuiInputLabel-root": {
-                    color: "#757575",
-                    "&.Mui-focused": {
-                      color: "#1976D2",
-                    },
-                  },
-                  "& .MuiFormHelperText-root": {
-                    color: "#757575",
-                  },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Ubicación del registro"
-                value={formData.ubicacion_registro}
-                onChange={(e) =>
-                  handleInputChange("ubicacion_registro", e.target.value)
-                }
-                inputProps={{ maxLength: 200 }}
-                helperText="Opcional · máx. 200 caracteres"
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#FFFFFF",
-                    color: "#212121",
-                    "& fieldset": {
-                      borderColor: "rgba(25, 118, 210, 0.16)",
-                    },
-                    "&:hover fieldset": {
-                      borderColor: "#1976D2",
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: "#1976D2",
-                    },
-                    "& .MuiInputBase-input": {
-                      color: "#212121",
-                    },
-                  },
-                  "& .MuiInputLabel-root": {
-                    color: "#757575",
-                    "&.Mui-focused": {
-                      color: "#1976D2",
-                    },
-                  },
-                  "& .MuiFormHelperText-root": {
-                    color: "#757575",
-                  },
-                }}
-              />
-            </Grid>
-          </Grid>
+          <Box>
+            <FormSection
+              title="Identificación"
+              subtitle="Datos generados automáticamente al registrar el documento."
+            >
+              <Grid container spacing={2.5}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="ID documento"
+                    value={formData.id_documento}
+                    disabled
+                    sx={disabledFieldSx}
+                    helperText="Consecutivo automático"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Fecha de alta"
+                    type="date"
+                    value={formData.fecha_alta}
+                    disabled
+                    InputLabelProps={{ shrink: true }}
+                    sx={disabledFieldSx}
+                  />
+                </Grid>
+              </Grid>
+            </FormSection>
+
+            <FormSection
+              title="Nomenclatura"
+              subtitle="Ingrese el código del documento y confírmelo."
+            >
+              <Grid container spacing={2.5}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Nomenclatura"
+                    value={formData.nomenclatura}
+                    onChange={(e) =>
+                      handleInputChange("nomenclatura", e.target.value)
+                    }
+                    error={!!errors.nomenclatura}
+                    helperText={errors.nomenclatura}
+                    required
+                    sx={{
+                      ...textFieldSx,
+                      "& .MuiFormHelperText-root": {
+                        color: errors.nomenclatura ? "#b91c1c" : "#757575",
+                      },
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Confirmar nomenclatura"
+                    value={formData.confirmar_nomenclatura}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "confirmar_nomenclatura",
+                        e.target.value,
+                      )
+                    }
+                    error={!!errors.confirmar_nomenclatura}
+                    helperText={errors.confirmar_nomenclatura}
+                    required
+                    sx={{
+                      ...textFieldSx,
+                      "& .MuiFormHelperText-root": {
+                        color: errors.confirmar_nomenclatura
+                          ? "#b91c1c"
+                          : "#757575",
+                      },
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </FormSection>
+
+            <FormSection
+              title="Datos del documento"
+              subtitle="Información principal del registro."
+            >
+              <Grid container spacing={2.5}>
+                <Grid item xs={12}>
+                  <FormControl
+                    fullWidth
+                    required
+                    error={!!errors.id_area}
+                    disabled={areasLoading}
+                    sx={{
+                      ...textFieldSx,
+                      "& .MuiSelect-icon": { color: "#757575" },
+                    }}
+                  >
+                    <InputLabel id="nuevo-doc-id-area-label">
+                      Área responsable
+                    </InputLabel>
+                    <Select
+                      labelId="nuevo-doc-id-area-label"
+                      label="Área responsable"
+                      value={
+                        formData.id_area === "" ? "" : String(formData.id_area)
+                      }
+                      onChange={(e) =>
+                        handleInputChange("id_area", e.target.value)
+                      }
+                    >
+                      <MenuItem value="">
+                        <em>Seleccione un área</em>
+                      </MenuItem>
+                      {areas.map((a) => (
+                        <MenuItem key={a.id_area} value={String(a.id_area)}>
+                          {a.area_nombre}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {errors.id_area ? (
+                      <FormHelperText sx={{ color: "#b91c1c" }}>
+                        {errors.id_area}
+                      </FormHelperText>
+                    ) : areasLoading ? (
+                      <FormHelperText>Cargando áreas…</FormHelperText>
+                    ) : null}
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Nombre del documento"
+                    value={formData.nombre_documento}
+                    onChange={(e) =>
+                      handleInputChange("nombre_documento", e.target.value)
+                    }
+                    error={!!errors.nombre_documento}
+                    helperText={errors.nombre_documento}
+                    required
+                    sx={{
+                      ...textFieldSx,
+                      "& .MuiFormHelperText-root": {
+                        color: errors.nombre_documento ? "#b91c1c" : "#757575",
+                      },
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </FormSection>
+
+            <FormSection
+              title="Información adicional"
+              subtitle="Campos opcionales de retención y ubicación."
+            >
+              <Grid container spacing={2.5}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Tiempo de retención"
+                    value={formData.tiempo_retencion}
+                    onChange={(e) =>
+                      handleInputChange("tiempo_retencion", e.target.value)
+                    }
+                    placeholder="Ej. 5 años"
+                    sx={textFieldSx}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Ubicación del registro"
+                    value={formData.ubicacion_registro}
+                    onChange={(e) =>
+                      handleInputChange("ubicacion_registro", e.target.value)
+                    }
+                    placeholder="Ej. Servidor / carpeta"
+                    sx={textFieldSx}
+                  />
+                </Grid>
+              </Grid>
+            </FormSection>
+          </Box>
         );
 
       case 1:
         return (
           <Box>
+            <FormSection
+              title="Archivos del documento"
+              subtitle="Adjunte al menos un archivo en los formatos permitidos."
+            >
             <Box
               sx={{
-                mb: 3,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
                 p: 4,
-                border: "2px dashed rgba(25, 118, 210, 0.16)",
-                borderRadius: 3,
-                backgroundColor: "rgba(25, 118, 210, 0.08)",
-                transition: "all 0.3s ease",
+                border: "2px dashed rgba(25, 118, 210, 0.25)",
+                borderRadius: 2,
+                backgroundColor: "#FFFFFF",
+                transition: "all 0.2s ease",
                 "&:hover": {
                   borderColor: "#1976D2",
-                  backgroundColor: "#E3F2FD",
+                  backgroundColor: "rgba(25, 118, 210, 0.06)",
                 },
               }}
             >
@@ -739,14 +603,15 @@ function NuevoDocumento({
                 </Button>
               </label>
               <Typography variant="caption" sx={{ color: "#757575", mt: 2 }}>
-                Formatos permitidos: .xlsx, .xls, .pdf, .doc, .docx, .ppt, .pptx
+                Excel, PDF, Word y PowerPoint
               </Typography>
             </Box>
+            </FormSection>
 
             {formData.archivos.length > 0 && (
-              <Box sx={{ mt: 3 }}>
-                <Typography variant="h6" sx={{ color: "#1976D2", mb: 2 }}>
-                  Archivos Cargados ({formData.archivos.length})
+              <Box sx={{ mt: 1 }}>
+                <Typography sx={{ ...sectionTitleSx, mb: 1.5 }}>
+                  Archivos cargados ({formData.archivos.length})
                 </Typography>
                 <Grid container spacing={2}>
                   {formData.archivos.map((file, index) => (
@@ -830,7 +695,7 @@ function NuevoDocumento({
         backgroundColor: "#ffffff",
         border: "1px solid rgba(25, 118, 210, 0.16)",
         borderRadius: 3,
-        maxWidth: "900px",
+        maxWidth: "960px",
         mx: "auto",
       }}
     >
@@ -870,36 +735,7 @@ function NuevoDocumento({
         </Typography>
       )}
 
-      <Stepper
-        activeStep={activeStep}
-        sx={{
-          mb: 4,
-          "& .MuiStepLabel-root .Mui-completed": {
-            color: "#1976D2",
-          },
-          "& .MuiStepLabel-label.Mui-completed": {
-            color: "#757575",
-          },
-          "& .MuiStepLabel-root .Mui-active": {
-            color: "#1976D2",
-          },
-          "& .MuiStepLabel-label.Mui-active": {
-            color: "#1976D2",
-          },
-          "& .MuiStepLabel-root .Mui-disabled": {
-            color: "rgba(255,255,255,0.5)",
-          },
-          "& .MuiStepIcon-root": {
-            color: "rgba(255,255,255,0.5)",
-            "&.Mui-active": {
-              color: "#1976D2",
-            },
-            "&.Mui-completed": {
-              color: "#1976D2",
-            },
-          },
-        }}
-      >
+      <Stepper activeStep={activeStep} sx={stepperSx}>
         {steps.map((label) => (
           <Step key={label}>
             <StepLabel>{label}</StepLabel>
@@ -907,7 +743,7 @@ function NuevoDocumento({
         ))}
       </Stepper>
 
-      <Box sx={{ mb: 4, minHeight: "300px" }}>
+      <Box sx={{ mb: 4, minHeight: 320 }}>
         {renderStepContent(activeStep)}
       </Box>
 

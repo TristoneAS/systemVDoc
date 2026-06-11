@@ -34,22 +34,11 @@ import {
   Slideshow,
 } from "@mui/icons-material";
 import { getMiEmpId, parseArchivos } from "./Solicitudes";
-
-const textFieldSx = {
-  "& .MuiOutlinedInput-root": {
-    backgroundColor: "#FFFFFF",
-    color: "#212121",
-    "& fieldset": { borderColor: "rgba(0, 0, 0, 0.12)" },
-    "&:hover fieldset": { borderColor: "#1976D2" },
-    "&.Mui-focused fieldset": { borderColor: "#1976D2" },
-    "& .MuiInputBase-input": { color: "#212121" },
-  },
-  "& .MuiInputLabel-root": {
-    color: "#757575",
-    "&.Mui-focused": { color: "#1976D2" },
-  },
-  "& .MuiFormHelperText-root": { color: "#757575" },
-};
+import FormSection, {
+  textFieldSx,
+  disabledFieldSx,
+  sectionTitleSx,
+} from "./FormSection";
 
 function getFileIcon(file) {
   const type = file.type || "";
@@ -254,139 +243,181 @@ export default function EditarSolicitudRechazadaDialog({
         },
       }}
     >
-      <DialogTitle sx={{ color: "#1976D2", fontWeight: 700 }}>
+      <DialogTitle
+        component="div"
+        sx={{ color: "#1976D2", fontWeight: 700 }}
+      >
         Editar y reenviar solicitud #{solicitud.id_solicitud}
         <Typography
           variant="body2"
           sx={{ mt: 0.5, fontWeight: 400, color: "#757575" }}
         >
-          Corrija la información y envíe de nuevo. El flujo reinicia con el
-          jefe directo; después pasará al comité y al responsable del área.
+          Corrija la información y envíe de nuevo. El flujo reinicia con el jefe
+          directo; después pasará al comité y al responsable del área.
         </Typography>
       </DialogTitle>
-      <DialogContent dividers>
+      <DialogContent dividers sx={{ bgcolor: "#FAFAFA" }}>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>
             {error}
           </Alert>
         )}
 
-        <Grid container spacing={2}>
-          <Grid item xs={12}>
+        <FormSection title="Identificación">
+          <TextField
+            fullWidth
+            label="ID documento"
+            value={solicitud.id_documento}
+            disabled
+            sx={disabledFieldSx}
+          />
+        </FormSection>
+
+        {esNuevo ? (
+          <>
+            <FormSection
+              title="Datos del documento"
+              subtitle="Información principal del registro."
+            >
+              <Grid container spacing={2.5}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    type="date"
+                    label="Fecha de alta"
+                    value={fechaAlta}
+                    onChange={(e) => setFechaAlta(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    sx={textFieldSx}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl
+                    fullWidth
+                    required
+                    sx={textFieldSx}
+                    disabled={areasLoading}
+                  >
+                    <InputLabel id="edit-sol-area-label">
+                      Área responsable
+                    </InputLabel>
+                    <Select
+                      labelId="edit-sol-area-label"
+                      label="Área responsable"
+                      value={idArea}
+                      onChange={(e) => setIdArea(e.target.value)}
+                    >
+                      <MenuItem value="">
+                        <em>Seleccione un área</em>
+                      </MenuItem>
+                      {areas.map((a) => (
+                        <MenuItem key={a.id_area} value={String(a.id_area)}>
+                          {a.area_nombre}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {areasLoading && (
+                      <FormHelperText>Cargando áreas…</FormHelperText>
+                    )}
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Nomenclatura"
+                    value={nomenclatura}
+                    onChange={(e) =>
+                      setNomenclatura(e.target.value.toUpperCase())
+                    }
+                    sx={textFieldSx}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Nombre del documento"
+                    value={nombreDocumento}
+                    onChange={(e) => setNombreDocumento(e.target.value)}
+                    sx={textFieldSx}
+                  />
+                </Grid>
+              </Grid>
+            </FormSection>
+          </>
+        ) : (
+          <FormSection
+            title="Descripción del cambio"
+            subtitle="Explique qué debe actualizarse y el contexto del cambio."
+          >
             <TextField
               fullWidth
-              label="ID documento"
-              value={solicitud.id_documento}
-              disabled
+              multiline
+              minRows={4}
+              label="Motivo y descripción del cambio"
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
               sx={textFieldSx}
             />
-          </Grid>
+          </FormSection>
+        )}
 
-          {esNuevo ? (
-            <>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="date"
-                  label="Fecha de alta"
-                  value={fechaAlta}
-                  onChange={(e) => setFechaAlta(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  sx={textFieldSx}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth sx={textFieldSx} disabled={areasLoading}>
-                  <InputLabel id="edit-sol-area-label">Área</InputLabel>
-                  <Select
-                    labelId="edit-sol-area-label"
-                    label="Área"
-                    value={idArea}
-                    onChange={(e) => setIdArea(e.target.value)}
-                  >
-                    <MenuItem value="">
-                      <em>Seleccione un área</em>
-                    </MenuItem>
-                    {areas.map((a) => (
-                      <MenuItem key={a.id_area} value={String(a.id_area)}>
-                        {a.area_nombre}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {areasLoading && (
-                    <FormHelperText>Cargando áreas…</FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Nomenclatura"
-                  value={nomenclatura}
-                  onChange={(e) => setNomenclatura(e.target.value)}
-                  sx={textFieldSx}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Nombre del documento"
-                  value={nombreDocumento}
-                  onChange={(e) => setNombreDocumento(e.target.value)}
-                  sx={textFieldSx}
-                />
-              </Grid>
-            </>
-          ) : (
-            <Grid item xs={12}>
+        <FormSection
+          title="Información adicional"
+          subtitle="Campos opcionales de retención y ubicación."
+        >
+          <Grid container spacing={2.5}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                multiline
-                minRows={3}
-                label="Motivo y descripción del cambio"
-                value={motivo}
-                onChange={(e) => setMotivo(e.target.value)}
-                inputProps={{ maxLength: 300 }}
-                helperText="Máx. 300 caracteres"
+                label="Tiempo de retención"
+                value={tiempoRetencion}
+                onChange={(e) => setTiempoRetencion(e.target.value)}
+                placeholder="Ej. 5 años"
                 sx={textFieldSx}
               />
             </Grid>
-          )}
-
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Tiempo de retención"
-              value={tiempoRetencion}
-              onChange={(e) => setTiempoRetencion(e.target.value)}
-              inputProps={{ maxLength: 200 }}
-              sx={textFieldSx}
-            />
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Ubicación del registro"
+                value={ubicacionRegistro}
+                onChange={(e) => setUbicacionRegistro(e.target.value)}
+                placeholder="Ej. Servidor / carpeta"
+                sx={textFieldSx}
+              />
+            </Grid>
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Ubicación del registro"
-              value={ubicacionRegistro}
-              onChange={(e) => setUbicacionRegistro(e.target.value)}
-              inputProps={{ maxLength: 200 }}
-              sx={textFieldSx}
-            />
-          </Grid>
+        </FormSection>
 
+        <FormSection
+          title="Archivos"
+          subtitle={
+            archivosNuevos.length > 0
+              ? "Los archivos nuevos reemplazan a los anteriores al reenviar."
+              : "Adjunte archivos nuevos o conserve los actuales."
+          }
+        >
           {archivosExistentes.length > 0 && archivosNuevos.length === 0 && (
-            <Grid item xs={12}>
+            <Box sx={{ mb: 2 }}>
               <Typography
-                variant="subtitle2"
+                variant="body2"
                 sx={{ color: "#757575", fontWeight: 600, mb: 1 }}
               >
-                Archivos actuales (se conservan si no adjunta otros)
+                Archivos actuales
               </Typography>
               <Stack spacing={0.75}>
                 {archivosExistentes.map((a, idx) => (
                   <Box
                     key={`${a.nombre_archivo}-${idx}`}
-                    sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      p: 1,
+                      borderRadius: 1,
+                      bgcolor: "#FFFFFF",
+                      border: "1px solid rgba(25, 118, 210, 0.12)",
+                    }}
                   >
                     <InsertDriveFile sx={{ color: "#1976D2", fontSize: 20 }} />
                     <Link
@@ -401,56 +432,72 @@ export default function EditarSolicitudRechazadaDialog({
                   </Box>
                 ))}
               </Stack>
-            </Grid>
+            </Box>
           )}
 
-          <Grid item xs={12}>
-            <Typography
-              variant="subtitle2"
-              sx={{ color: "#757575", fontWeight: 600, mb: 1 }}
-            >
-              {archivosNuevos.length > 0
-                ? "Nuevos archivos (reemplazan los anteriores)"
-                : "Adjuntar archivos nuevos (opcional)"}
-            </Typography>
-            <Box
-              sx={{
-                p: 2,
-                border: "2px dashed rgba(25, 118, 210, 0.2)",
-                borderRadius: 2,
-                textAlign: "center",
-              }}
-            >
-              <input
-                accept=".xlsx,.xls,.pdf,.doc,.docx,.ppt,.pptx"
-                style={{ display: "none" }}
-                id="edit-sol-rechazada-files"
-                multiple
-                type="file"
-                onChange={handleFileUpload}
-              />
-              <label htmlFor="edit-sol-rechazada-files">
-                <Button
-                  variant="outlined"
-                  component="span"
-                  startIcon={<CloudUpload />}
-                  sx={{
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              p: 3,
+              border: "2px dashed rgba(25, 118, 210, 0.25)",
+              borderRadius: 2,
+              bgcolor: "#FFFFFF",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                borderColor: "#1976D2",
+                bgcolor: "rgba(25, 118, 210, 0.06)",
+              },
+            }}
+          >
+            <input
+              accept=".xlsx,.xls,.pdf,.doc,.docx,.ppt,.pptx"
+              style={{ display: "none" }}
+              id="edit-sol-rechazada-files"
+              multiple
+              type="file"
+              onChange={handleFileUpload}
+            />
+            <label htmlFor="edit-sol-rechazada-files">
+              <Button
+                variant="contained"
+                component="span"
+                startIcon={<CloudUpload />}
+                sx={{
+                  backgroundColor: "#FFFFFF",
+                  color: "#212121",
+                  border: "1px solid #1976D2",
+                  py: 1.25,
+                  px: 3,
+                  borderRadius: 2,
+                  fontWeight: 600,
+                  textTransform: "none",
+                  "&:hover": {
+                    backgroundColor: "#BBDEFB",
                     color: "#1976D2",
-                    borderColor: "#1976D2",
-                    textTransform: "none",
-                  }}
-                >
-                  Seleccionar archivos
-                </Button>
-              </label>
-            </Box>
-            {archivosNuevos.length > 0 && (
-              <Grid container spacing={1} sx={{ mt: 1 }}>
+                  },
+                }}
+              >
+                Seleccionar archivos
+              </Button>
+            </label>
+            <Typography variant="caption" sx={{ color: "#757575", mt: 1.5 }}>
+              Excel, PDF, Word y PowerPoint
+            </Typography>
+          </Box>
+
+          {archivosNuevos.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Typography sx={{ ...sectionTitleSx, mb: 1.5, fontSize: "0.875rem" }}>
+                Archivos nuevos ({archivosNuevos.length})
+              </Typography>
+              <Grid container spacing={1.5}>
                 {archivosNuevos.map((file, index) => (
                   <Grid item xs={12} sm={6} key={`${file.name}-${index}`}>
                     <Card
                       sx={{
-                        bgcolor: "#E3F2FD",
+                        bgcolor: "#FFFFFF",
                         border: "1px solid rgba(25, 118, 210, 0.16)",
                       }}
                     >
@@ -486,6 +533,7 @@ export default function EditarSolicitudRechazadaDialog({
                                 prev.filter((_, i) => i !== index),
                               )
                             }
+                            sx={{ color: "#1976D2" }}
                           >
                             <Delete fontSize="small" />
                           </IconButton>
@@ -495,9 +543,9 @@ export default function EditarSolicitudRechazadaDialog({
                   </Grid>
                 ))}
               </Grid>
-            )}
-          </Grid>
-        </Grid>
+            </Box>
+          )}
+        </FormSection>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button

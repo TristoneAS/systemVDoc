@@ -38,22 +38,12 @@ import HexagonMenu from "./HexagonMenu";
 import NuevoDocumento from "./NuevoDocumento";
 import ModalConfirmarCorreoAprobadores from "./ModalConfirmarCorreoAprobadores";
 import { getSolicitanteParaSolicitud } from "./Solicitudes";
-
-const textFieldSx = {
-  "& .MuiOutlinedInput-root": {
-    backgroundColor: "#FFFFFF",
-    color: "#212121",
-    "& fieldset": { borderColor: "rgba(0, 0, 0, 0.12)" },
-    "&:hover fieldset": { borderColor: "#1976D2" },
-    "&.Mui-focused fieldset": { borderColor: "#1976D2" },
-    "& .MuiInputBase-input": { color: "#212121" },
-  },
-  "& .MuiInputLabel-root": {
-    color: "#757575",
-    "&.Mui-focused": { color: "#1976D2" },
-  },
-  "& .MuiFormHelperText-root": { color: "#757575" },
-};
+import FormSection, {
+  textFieldSx,
+  disabledFieldSx,
+  sectionTitleSx,
+  stepperSx,
+} from "./FormSection";
 
 const stepsCambio = ["Documento y motivo", "Cargar archivos"];
 
@@ -327,16 +317,17 @@ function SolicitudCambioDocumento({ onVolver }) {
     switch (activeStep) {
       case 0:
         return (
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+          <Box>
+            <FormSection
+              title="Buscar documento"
+              subtitle="Escriba la nomenclatura o parte del código y seleccione el registro."
+            >
+              <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
                 <TextField
                   fullWidth
                   label="Buscar por nomenclatura"
                   value={busqueda}
-                  onChange={(e) =>
-                    setBusqueda(e.target.value.toUpperCase())
-                  }
+                  onChange={(e) => setBusqueda(e.target.value.toUpperCase())}
                   onKeyDown={(e) =>
                     e.key === "Enter" && handleBuscarDocumentos()
                   }
@@ -370,54 +361,54 @@ function SolicitudCambioDocumento({ onVolver }) {
                 </Button>
               </Box>
               {errorBusqueda && (
-                <Typography sx={{ color: "#b91c1c", mt: 1 }} variant="body2">
+                <Typography sx={{ color: "#b91c1c", mt: 1.5 }} variant="body2">
                   {errorBusqueda}
                 </Typography>
               )}
-            </Grid>
-            {resultados.length > 1 && (
-              <Grid item xs={12}>
-                <Typography sx={{ color: "#757575", mb: 1 }}>
-                  Seleccione el documento:
-                </Typography>
-                <List
-                  dense
-                  sx={{
-                    bgcolor: "#E3F2FD",
-                    borderRadius: 2,
-                    border: "1px solid rgba(25, 118, 210, 0.16)",
-                  }}
-                >
-                  {resultados.map((doc) => (
-                    <ListItemButton
-                      key={doc.id_documento}
-                      selected={
-                        documentoSeleccionado?.id_documento === doc.id_documento
-                      }
-                      onClick={() => {
-                        setDocumentoSeleccionado(doc);
-                        setTiempoRetencion(String(doc.tiempo_retencion ?? ""));
-                        setUbicacionRegistro(
-                          String(doc.ubicacion_registro ?? ""),
-                        );
-                      }}
-                    >
-                      <ListItemText
-                        primary={doc.nombre_documento}
-                        secondary={`${doc.nomenclatura} · ${doc.id_documento}`}
-                        primaryTypographyProps={{ sx: { color: "#1976D2" } }}
-                        secondaryTypographyProps={{ sx: { color: "#757575" } }}
-                      />
-                    </ListItemButton>
-                  ))}
-                </List>
-              </Grid>
-            )}
-            {documentoSeleccionado && (
-              <Grid item xs={12}>
+              {resultados.length > 1 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography sx={{ color: "#757575", mb: 1, fontSize: "0.875rem" }}>
+                    Seleccione el documento:
+                  </Typography>
+                  <List
+                    dense
+                    sx={{
+                      bgcolor: "#FFFFFF",
+                      borderRadius: 2,
+                      border: "1px solid rgba(25, 118, 210, 0.16)",
+                    }}
+                  >
+                    {resultados.map((doc) => (
+                      <ListItemButton
+                        key={doc.id_documento}
+                        selected={
+                          documentoSeleccionado?.id_documento ===
+                          doc.id_documento
+                        }
+                        onClick={() => {
+                          setDocumentoSeleccionado(doc);
+                          setTiempoRetencion(String(doc.tiempo_retencion ?? ""));
+                          setUbicacionRegistro(
+                            String(doc.ubicacion_registro ?? ""),
+                          );
+                        }}
+                      >
+                        <ListItemText
+                          primary={doc.nombre_documento}
+                          secondary={`${doc.nomenclatura} · ${doc.id_documento}`}
+                          primaryTypographyProps={{ sx: { color: "#1976D2" } }}
+                          secondaryTypographyProps={{ sx: { color: "#757575" } }}
+                        />
+                      </ListItemButton>
+                    ))}
+                  </List>
+                </Box>
+              )}
+              {documentoSeleccionado && (
                 <Card
                   sx={{
-                    bgcolor: "#E3F2FD",
+                    mt: 2,
+                    bgcolor: "#FFFFFF",
                     border: "1px solid rgba(25, 118, 210, 0.2)",
                   }}
                 >
@@ -438,7 +429,7 @@ function SolicitudCambioDocumento({ onVolver }) {
                         label={documentoSeleccionado.nomenclatura}
                         sx={{
                           bgcolor: "rgba(25, 118, 210, 0.14)",
-                          color: "#BBDEFB",
+                          color: "#1976D2",
                         }}
                       />
                       <Chip
@@ -452,31 +443,13 @@ function SolicitudCambioDocumento({ onVolver }) {
                     </Box>
                   </CardContent>
                 </Card>
-              </Grid>
-            )}
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Tiempo de retención"
-                value={tiempo_retencion}
-                onChange={(e) => setTiempoRetencion(e.target.value)}
-                inputProps={{ maxLength: 200 }}
-                helperText="Si informa valores, al aprobar el cambio se actualizarán en el catálogo (opcional)"
-                sx={{ ...textFieldSx }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Ubicación del registro"
-                value={ubicacion_registro}
-                onChange={(e) => setUbicacionRegistro(e.target.value)}
-                inputProps={{ maxLength: 200 }}
-                helperText="Opcional · máx. 200 caracteres"
-                sx={{ ...textFieldSx }}
-              />
-            </Grid>
-            <Grid item xs={12}>
+              )}
+            </FormSection>
+
+            <FormSection
+              title="Descripción del cambio"
+              subtitle="Explique qué debe actualizarse y el contexto del cambio."
+            >
               <TextField
                 fullWidth
                 multiline
@@ -493,12 +466,8 @@ function SolicitudCambioDocumento({ onVolver }) {
                     });
                   }
                 }}
-                inputProps={{ maxLength: 300 }}
                 error={!!errors.motivo}
-                helperText={
-                  errors.motivo ||
-                  "Indique qué debe actualizarse y el contexto del cambio (máx. 300 caracteres)"
-                }
+                helperText={errors.motivo}
                 required
                 sx={{
                   ...textFieldSx,
@@ -507,79 +476,131 @@ function SolicitudCambioDocumento({ onVolver }) {
                   },
                 }}
               />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="ID Empleado Solicitante"
-                value={empIdSolicitante}
-                disabled
-                helperText={
-                  errors.solicitante ||
-                  (loadingSolicitante ? "Cargando…" : "Desde tu perfil")
-                }
-                sx={textFieldSx}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Solicitante"
-                value={nombreSolicitante}
-                disabled
-                sx={textFieldSx}
-              />
-            </Grid>
-          </Grid>
+            </FormSection>
+
+            <FormSection
+              title="Información adicional"
+              subtitle="Opcional. Al aprobar el cambio, estos valores se actualizarán en el catálogo."
+            >
+              <Grid container spacing={2.5}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Tiempo de retención"
+                    value={tiempo_retencion}
+                    onChange={(e) => setTiempoRetencion(e.target.value)}
+                    placeholder="Ej. 5 años"
+                    sx={textFieldSx}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Ubicación del registro"
+                    value={ubicacion_registro}
+                    onChange={(e) => setUbicacionRegistro(e.target.value)}
+                    placeholder="Ej. Servidor / carpeta"
+                    sx={textFieldSx}
+                  />
+                </Grid>
+              </Grid>
+            </FormSection>
+
+            <FormSection
+              title="Solicitante"
+              subtitle="Datos tomados de su perfil de sesión."
+            >
+              <Grid container spacing={2.5}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="ID empleado solicitante"
+                    value={empIdSolicitante}
+                    disabled
+                    helperText={
+                      errors.solicitante ||
+                      (loadingSolicitante ? "Cargando…" : undefined)
+                    }
+                    sx={disabledFieldSx}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Solicitante"
+                    value={nombreSolicitante}
+                    disabled
+                    sx={disabledFieldSx}
+                  />
+                </Grid>
+              </Grid>
+            </FormSection>
+          </Box>
         );
       case 1:
         return (
           <Box>
-            <Box
-              sx={{
-                mb: 3,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                p: 4,
-                border: "2px dashed rgba(25, 118, 210, 0.16)",
-                borderRadius: 3,
-                bgcolor: "rgba(25, 118, 210, 0.08)",
-              }}
+            <FormSection
+              title="Archivos del cambio"
+              subtitle="Adjunte borradores, evidencia o documentos actualizados."
             >
-              <input
-                accept=".xlsx,.xls,.pdf,.doc,.docx,.ppt,.pptx"
-                style={{ display: "none" }}
-                id="file-upload-cambio"
-                multiple
-                type="file"
-                onChange={handleFileUpload}
-              />
-              <label htmlFor="file-upload-cambio">
-                <Button
-                  variant="contained"
-                  component="span"
-                  startIcon={<CloudUpload />}
-                  sx={{
-                    backgroundColor: "#E3F2FD",
-                    color: "#1976D2",
-                    border: "1px solid #1976D2",
-                    py: 1.5,
-                    px: 3,
-                    borderRadius: 2,
-                    fontWeight: 600,
-                    textTransform: "none",
-                    "&:hover": { backgroundColor: "#BBDEFB", color: "#1976D2" },
-                  }}
-                >
-                  Adjuntar archivos (borradores o evidencia)
-                </Button>
-              </label>
-              <Typography variant="caption" sx={{ color: "#757575", mt: 2 }}>
-                .xlsx, .xls, .pdf, .doc, .docx, .ppt, .pptx
-              </Typography>
-            </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  p: 4,
+                  border: "2px dashed rgba(25, 118, 210, 0.25)",
+                  borderRadius: 2,
+                  bgcolor: "#FFFFFF",
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    borderColor: "#1976D2",
+                    bgcolor: "rgba(25, 118, 210, 0.06)",
+                  },
+                }}
+              >
+                <input
+                  accept=".xlsx,.xls,.pdf,.doc,.docx,.ppt,.pptx"
+                  style={{ display: "none" }}
+                  id="file-upload-cambio"
+                  multiple
+                  type="file"
+                  onChange={handleFileUpload}
+                />
+                <label htmlFor="file-upload-cambio">
+                  <Button
+                    variant="contained"
+                    component="span"
+                    startIcon={<CloudUpload />}
+                    sx={{
+                      backgroundColor: "#FFFFFF",
+                      color: "#212121",
+                      border: "1px solid #1976D2",
+                      py: 1.5,
+                      px: 3,
+                      borderRadius: 2,
+                      fontWeight: 600,
+                      textTransform: "none",
+                      "&:hover": {
+                        backgroundColor: "#BBDEFB",
+                        color: "#1976D2",
+                      },
+                    }}
+                  >
+                    Cargar archivos
+                  </Button>
+                </label>
+                <Typography variant="caption" sx={{ color: "#757575", mt: 2 }}>
+                  Excel, PDF, Word y PowerPoint
+                </Typography>
+              </Box>
+            </FormSection>
             {formData.archivos.length > 0 && (
+              <Box sx={{ mt: 1 }}>
+                <Typography sx={{ ...sectionTitleSx, mb: 1.5 }}>
+                  Archivos cargados ({formData.archivos.length})
+                </Typography>
               <Grid container spacing={2}>
                 {formData.archivos.map((file, index) => (
                   <Grid item xs={12} sm={6} md={4} key={index}>
@@ -638,6 +659,7 @@ function SolicitudCambioDocumento({ onVolver }) {
                   </Grid>
                 ))}
               </Grid>
+              </Box>
             )}
           </Box>
         );
@@ -654,7 +676,7 @@ function SolicitudCambioDocumento({ onVolver }) {
         backgroundColor: "#ffffff",
         border: "1px solid rgba(25, 118, 210, 0.16)",
         borderRadius: 3,
-        maxWidth: "900px",
+        maxWidth: "960px",
         mx: "auto",
       }}
     >
@@ -679,20 +701,7 @@ function SolicitudCambioDocumento({ onVolver }) {
         archivos para enviar la solicitud.
       </Typography>
 
-      <Stepper
-        activeStep={activeStep}
-        sx={{
-          mb: 4,
-          "& .MuiStepLabel-root .Mui-completed": { color: "#1976D2" },
-          "& .MuiStepLabel-label.Mui-completed": { color: "#757575" },
-          "& .MuiStepLabel-root .Mui-active": { color: "#1976D2" },
-          "& .MuiStepLabel-label.Mui-active": { color: "#1976D2" },
-          "& .MuiStepIcon-root": {
-            color: "rgba(255,255,255,0.5)",
-            "&.Mui-active, &.Mui-completed": { color: "#1976D2" },
-          },
-        }}
-      >
+      <Stepper activeStep={activeStep} sx={stepperSx}>
         {stepsCambio.map((label) => (
           <Step key={label}>
             <StepLabel>{label}</StepLabel>
@@ -700,7 +709,7 @@ function SolicitudCambioDocumento({ onVolver }) {
         ))}
       </Stepper>
 
-      <Box sx={{ mb: 4, minHeight: 280 }}>{renderStep()}</Box>
+      <Box sx={{ mb: 4, minHeight: 320 }}>{renderStep()}</Box>
 
       {submitError && (
         <Alert
