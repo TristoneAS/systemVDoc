@@ -106,9 +106,16 @@ function NuevoDocumento({
   }, []);
 
   const handleInputChange = (field, value) => {
+    let nextValue = value;
+    if (
+      saveAsSolicitud &&
+      (field === "nomenclatura" || field === "confirmar_nomenclatura")
+    ) {
+      nextValue = value.toUpperCase();
+    }
     setFormData((prev) => ({
       ...prev,
-      [field]: value,
+      [field]: nextValue,
     }));
     // Limpiar error del campo cuando se modifica
     if (errors[field]) {

@@ -4,6 +4,10 @@ import { getNextIdDocumento } from "@/libs/next_id_documento";
 import { resolveIdAreaRequerido } from "@/libs/id_area";
 import { optionalVarchar200 } from "@/libs/optional_varchar200";
 import { obtenerDocumentoConArchivos } from "@/libs/documento_detalle";
+import {
+  cargarMapaAreas,
+  enriquecerDocumentosConArea,
+} from "@/libs/documentos_area";
 import fs from "fs";
 import path from "path";
 
@@ -47,19 +51,18 @@ export async function GET(request) {
       }
       const [documentos] = await conn.query(
         `SELECT d.*,
-         MAX(ar.area_nombre) AS area_nombre,
-         COUNT(a.id_archivo) AS total_archivos
+         (SELECT COUNT(*)
+          FROM archivos_documentos ad
+          WHERE ad.id_documento = d.id_documento) AS total_archivos
          FROM documentos d
-         LEFT JOIN areas ar ON d.id_area = ar.id_area
-         LEFT JOIN archivos_documentos a ON d.id_documento = a.id_documento
          WHERE ${whereParts.join(" AND ")}
-         GROUP BY d.id_documento
          ORDER BY d.fecha_creacion DESC`,
         queryParams,
       );
+      const mapaAreas = await cargarMapaAreas(conn);
       return NextResponse.json({
         success: true,
-        data: documentos,
+        data: enriquecerDocumentosConArea(documentos, mapaAreas),
       });
     }
 
@@ -82,20 +85,19 @@ export async function GET(request) {
       const listParams = filtroEstadoValido ? [estadoFiltro] : [];
       const [documentos] = await conn.query(
         `SELECT d.*,
-         MAX(ar.area_nombre) AS area_nombre,
-         COUNT(a.id_archivo) AS total_archivos
+         (SELECT COUNT(*)
+          FROM archivos_documentos ad
+          WHERE ad.id_documento = d.id_documento) AS total_archivos
          FROM documentos d
-         LEFT JOIN areas ar ON d.id_area = ar.id_area
-         LEFT JOIN archivos_documentos a ON d.id_documento = a.id_documento
          ${whereClause}
-         GROUP BY d.id_documento
          ORDER BY d.fecha_creacion DESC`,
         listParams,
       );
 
+      const mapaAreas = await cargarMapaAreas(conn);
       return NextResponse.json({
         success: true,
-        data: documentos,
+        data: enriquecerDocumentosConArea(documentos, mapaAreas),
       });
     }
   } catch (error) {

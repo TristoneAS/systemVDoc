@@ -1,4 +1,8 @@
 import { conn } from "@/libs/system_v_docs";
+import {
+  cargarMapaAreas,
+  enriquecerDocumentosConArea,
+} from "@/libs/documentos_area";
 
 /**
  * Documento con archivos (sin JSON_ARRAYAGG; compatible con MySQL/MariaDB en producción).
@@ -8,9 +12,8 @@ export async function obtenerDocumentoConArchivos(id_documento) {
   if (!id) return null;
 
   const [docs] = await conn.query(
-    `SELECT d.*, ar.area_nombre
+    `SELECT d.*
      FROM documentos d
-     LEFT JOIN areas ar ON d.id_area = ar.id_area
      WHERE d.id_documento = ?
      LIMIT 1`,
     [id],
@@ -34,8 +37,11 @@ export async function obtenerDocumentoConArchivos(id_documento) {
     }
   }
 
+  const mapaAreas = await cargarMapaAreas(conn);
+  const [docEnriquecido] = enriquecerDocumentosConArea(docs, mapaAreas);
+
   return {
-    ...docs[0],
+    ...docEnriquecido,
     archivos,
   };
 }

@@ -38,9 +38,9 @@ function MatrizRegistros() {
       if (!response.ok) {
         setError(data.error || "Error al cargar la matriz de registros");
         setRegistros([]);
-      } else {
-        setRegistros(data.data || []);
+        return;
       }
+      setRegistros(data.data || []);
     } catch (e) {
       console.error("Error al cargar matriz de registros:", e);
       setError("Error de conexión. Intente nuevamente.");
@@ -53,7 +53,13 @@ function MatrizRegistros() {
   const registrosFiltrados = registros.filter((doc) => {
     const q = searchTerm.toLowerCase();
     return (
+      String(doc.nomenclatura ?? "")
+        .toLowerCase()
+        .includes(q) ||
       String(doc.nombre_documento ?? "")
+        .toLowerCase()
+        .includes(q) ||
+      String(doc.responsable_area ?? "")
         .toLowerCase()
         .includes(q) ||
       String(doc.area_nombre ?? "")
@@ -88,13 +94,13 @@ function MatrizRegistros() {
           Matriz de registros
         </Typography>
         <Typography variant="body2" sx={{ color: "#757575", mb: 3 }}>
-          Consulta del catálogo de documentos: nombre, área responsable, tiempo
-          de retención y ubicación del registro.
+          Consulta del catálogo: nomenclatura, nombre, responsable del área
+          (areas.emp_nombre por documentos.id_area), área, retención y ubicación.
         </Typography>
 
         <TextField
           fullWidth
-          placeholder="Buscar por nombre, dueño del registro, retención o ubicación..."
+          placeholder="Buscar por nomenclatura, nombre, responsable del área..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           sx={{
@@ -152,7 +158,25 @@ function MatrizRegistros() {
                         borderBottom: "2px solid rgba(25, 118, 210, 0.2)",
                       }}
                     >
+                      Nomenclatura
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontWeight: 700,
+                        color: "#1976D2",
+                        borderBottom: "2px solid rgba(25, 118, 210, 0.2)",
+                      }}
+                    >
                       Nombre del registro
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontWeight: 700,
+                        color: "#1976D2",
+                        borderBottom: "2px solid rgba(25, 118, 210, 0.2)",
+                      }}
+                    >
+                      Responsable del área
                     </TableCell>
                     <TableCell
                       sx={{
@@ -187,7 +211,7 @@ function MatrizRegistros() {
                   {registrosFiltrados.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={4}
+                        colSpan={6}
                         align="center"
                         sx={{ color: "#757575", py: 4, borderBottom: "none" }}
                       >
@@ -213,7 +237,19 @@ function MatrizRegistros() {
                         <TableCell
                           sx={{ color: "#1976D2", borderBottom: "none" }}
                         >
+                          {doc.nomenclatura?.trim() ? doc.nomenclatura : "—"}
+                        </TableCell>
+                        <TableCell
+                          sx={{ color: "#1976D2", borderBottom: "none" }}
+                        >
                           {doc.nombre_documento}
+                        </TableCell>
+                        <TableCell
+                          sx={{ color: "#1976D2", borderBottom: "none" }}
+                        >
+                          {doc.responsable_area?.trim()
+                            ? doc.responsable_area
+                            : "—"}
                         </TableCell>
                         <TableCell
                           sx={{ color: "#1976D2", borderBottom: "none" }}

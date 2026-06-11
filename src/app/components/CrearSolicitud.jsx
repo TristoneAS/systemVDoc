@@ -334,7 +334,9 @@ function SolicitudCambioDocumento({ onVolver }) {
                   fullWidth
                   label="Buscar por nomenclatura"
                   value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
+                  onChange={(e) =>
+                    setBusqueda(e.target.value.toUpperCase())
+                  }
                   onKeyDown={(e) =>
                     e.key === "Enter" && handleBuscarDocumentos()
                   }

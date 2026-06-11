@@ -36,11 +36,12 @@ import {
   PictureAsPdf,
   InsertDriveFile,
   DescriptionOutlined,
-  OpenInNew,
   Close,
   Slideshow,
   Block,
   CheckCircle,
+  Check,
+  HourglassEmpty,
 } from "@mui/icons-material";
 import HexagonMenu from "./HexagonMenu";
 import { getIsAdmin } from "./Solicitudes";
@@ -58,6 +59,10 @@ function labelEstadoDocumento(estado) {
   return normalizarEstadoDocumento(estado) === "activo" ? "Activo" : "Inactivo";
 }
 
+function esDocumentoDescargado(descargado) {
+  return descargado === true || descargado === 1 || descargado === "1";
+}
+
 function VisualizarDocumentos() {
   const [documentos, setDocumentos] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -69,6 +74,7 @@ function VisualizarDocumentos() {
   const [filtroEstado, setFiltroEstado] = useState("todos");
   const [isAdmin, setIsAdmin] = useState(false);
   const [estadoActionId, setEstadoActionId] = useState(null);
+  const [descargadoActionId, setDescargadoActionId] = useState(null);
   const [banner, setBanner] = useState(null);
 
   useEffect(() => {
@@ -104,6 +110,55 @@ function VisualizarDocumentos() {
       setDocumentos([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleDescargadoDocumento = async (idDocumento, descargadoActual) => {
+    const nuevoDescargado = !esDocumentoDescargado(descargadoActual);
+    setDescargadoActionId(idDocumento);
+    setBanner(null);
+    try {
+      const response = await fetch(`/api/documentos/${idDocumento}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          descargado: nuevoDescargado,
+          is_admin: true,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setBanner({
+          severity: "error",
+          text: data.error || "No se pudo actualizar el estado de descarga",
+        });
+        return;
+      }
+      setBanner({
+        severity: "success",
+        text: data.message || "Estado de descarga actualizado",
+      });
+      setDocumentos((prev) =>
+        prev.map((d) =>
+          d.id_documento === idDocumento
+            ? { ...d, descargado: nuevoDescargado ? 1 : 0 }
+            : d,
+        ),
+      );
+      if (
+        selectedDocumento?.id_documento === idDocumento &&
+        openDialog
+      ) {
+        setSelectedDocumento((prev) =>
+          prev
+            ? { ...prev, descargado: nuevoDescargado ? 1 : 0 }
+            : prev,
+        );
+      }
+    } catch {
+      setBanner({ severity: "error", text: "Error de conexión" });
+    } finally {
+      setDescargadoActionId(null);
     }
   };
 
@@ -662,6 +717,44 @@ function VisualizarDocumentos() {
                                 <Visibility />
                               </IconButton>
                             </Tooltip>
+                            {isAdmin && (
+                              <Tooltip
+                                title={
+                                  esDocumentoDescargado(doc.descargado)
+                                    ? "Marcar como pendiente de descarga"
+                                    : "Marcar como descargado"
+                                }
+                              >
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    disabled={
+                                      descargadoActionId !== null ||
+                                      estadoActionId !== null
+                                    }
+                                    onClick={() =>
+                                      toggleDescargadoDocumento(
+                                        doc.id_documento,
+                                        doc.descargado,
+                                      )
+                                    }
+                                    sx={{
+                                      color: esDocumentoDescargado(doc.descargado)
+                                        ? "#2E7D32"
+                                        : "#FB8500",
+                                    }}
+                                  >
+                                    {descargadoActionId === doc.id_documento ? (
+                                      <CircularProgress size={20} />
+                                    ) : esDocumentoDescargado(doc.descargado) ? (
+                                      <Check />
+                                    ) : (
+                                      <HourglassEmpty />
+                                    )}
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                            )}
                             {isAdmin &&
                               normalizarEstadoDocumento(doc.estado) ===
                                 "activo" && (
@@ -881,7 +974,7 @@ function VisualizarDocumentos() {
                                         },
                                       }}
                                     >
-                                      <OpenInNew />
+                                      <Visibility />
                                     </IconButton>
                                   </Tooltip>
                                   <Tooltip title="Descargar">

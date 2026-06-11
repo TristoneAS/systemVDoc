@@ -67,21 +67,27 @@ export async function PATCH(request, { params }) {
 
     if (body.is_admin !== true) {
       return NextResponse.json(
-        { error: "Solo un administrador puede cambiar el estado del documento." },
+        {
+          error:
+            "Solo un administrador puede modificar el documento desde esta acción.",
+        },
         { status: 403 },
       );
     }
 
-    const estadoRaw = String(body.estado ?? "").trim().toLowerCase();
-    if (estadoRaw !== "activo" && estadoRaw !== "inactivo") {
+    const tieneEstado = body.estado !== undefined && body.estado !== null;
+    const tieneDescargado =
+      body.descargado !== undefined && body.descargado !== null;
+
+    if (!tieneEstado && !tieneDescargado) {
       return NextResponse.json(
-        { error: "estado debe ser activo o inactivo" },
+        { error: "Indique estado o descargado para actualizar" },
         { status: 400 },
       );
     }
 
     const [existing] = await conn.query(
-      "SELECT id_documento, estado FROM documentos WHERE id_documento = ?",
+      "SELECT id_documento, estado, descargado FROM documentos WHERE id_documento = ?",
       [id_documento],
     );
 
@@ -92,32 +98,61 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    const estadoActual = String(existing[0].estado ?? "activo")
-      .trim()
-      .toLowerCase();
-    if (estadoActual === estadoRaw) {
-      return NextResponse.json({
-        success: true,
-        message:
+    const respuesta = { id_documento };
+    let message = "Documento actualizado";
+
+    if (tieneEstado) {
+      const estadoRaw = String(body.estado ?? "").trim().toLowerCase();
+      if (estadoRaw !== "activo" && estadoRaw !== "inactivo") {
+        return NextResponse.json(
+          { error: "estado debe ser activo o inactivo" },
+          { status: 400 },
+        );
+      }
+      const estadoActual = String(existing[0].estado ?? "activo")
+        .trim()
+        .toLowerCase();
+      if (estadoActual !== estadoRaw) {
+        await conn.query(
+          `UPDATE documentos SET estado = ?, fecha_actualizacion = NOW() WHERE id_documento = ?`,
+          [estadoRaw, id_documento],
+        );
+        message =
+          estadoRaw === "activo"
+            ? "Documento habilitado correctamente"
+            : "Documento deshabilitado correctamente";
+      } else {
+        message =
           estadoRaw === "activo"
             ? "El documento ya está activo"
-            : "El documento ya está inactivo",
-        data: { id_documento, estado: estadoRaw },
-      });
+            : "El documento ya está inactivo";
+      }
+      respuesta.estado = estadoRaw;
     }
 
-    await conn.query(
-      `UPDATE documentos SET estado = ?, fecha_actualizacion = NOW() WHERE id_documento = ?`,
-      [estadoRaw, id_documento],
-    );
+    if (tieneDescargado) {
+      const descargadoRaw = body.descargado === true || body.descargado === 1;
+      const descargadoActual = Boolean(Number(existing[0].descargado));
+      if (descargadoActual !== descargadoRaw) {
+        await conn.query(
+          `UPDATE documentos SET descargado = ?, fecha_actualizacion = NOW() WHERE id_documento = ?`,
+          [descargadoRaw ? 1 : 0, id_documento],
+        );
+        message = descargadoRaw
+          ? "Marcado como descargado"
+          : "Marcado como pendiente de descarga";
+      } else {
+        message = descargadoRaw
+          ? "El documento ya estaba marcado como descargado"
+          : "El documento ya estaba pendiente de descarga";
+      }
+      respuesta.descargado = descargadoRaw;
+    }
 
     return NextResponse.json({
       success: true,
-      message:
-        estadoRaw === "activo"
-          ? "Documento habilitado correctamente"
-          : "Documento deshabilitado correctamente",
-      data: { id_documento, estado: estadoRaw },
+      message,
+      data: respuesta,
     });
   } catch (error) {
     console.error("Error al actualizar estado del documento:", error);
