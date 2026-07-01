@@ -23,18 +23,14 @@ import {
   registrarHistorial,
   resumenArchivosHistorial,
 } from "@/libs/historial_archivos";
+import {
+  buildRutaArchivoPublica,
+  buildRutaCarpetaPublica,
+  ensureDocumentosDir,
+  getCarpetaDocumentoFisica,
+} from "@/libs/almacen_documentos";
 import fs from "fs";
 import path from "path";
-
-// Ruta base para almacenar documentos
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "documentos");
-
-// Asegurar que el directorio existe
-const ensureUploadDir = (dirPath) => {
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
-  }
-};
 
 export async function GET(request) {
   try {
@@ -182,9 +178,8 @@ export async function POST(request) {
 
     const id_documento = await getNextIdDocumento();
 
-    // Crear carpeta única para este documento
-    const carpetaDocumento = path.join(UPLOAD_DIR, id_documento);
-    ensureUploadDir(carpetaDocumento);
+    const carpetaDocumento = getCarpetaDocumentoFisica(id_documento);
+    ensureDocumentosDir(carpetaDocumento);
 
     // Guardar archivos y obtener sus rutas
     const archivosGuardados = [];
@@ -208,7 +203,7 @@ export async function POST(request) {
       // Guardar información del archivo
       archivosGuardados.push({
         nombre_archivo: nombreArchivo,
-        ruta_archivo: `/uploads/documentos/${id_documento}/${nombreArchivo}`,
+        ruta_archivo: buildRutaArchivoPublica(id_documento, nombreArchivo),
         tipo_archivo: archivo.type || path.extname(nombreArchivo),
         tamano_archivo: archivo.size,
       });
@@ -228,7 +223,7 @@ export async function POST(request) {
         nomenclatura,
         nombre_documento,
         id_area,
-        `/uploads/documentos/${id_documento}`,
+        buildRutaCarpetaPublica(id_documento),
         estadoAlta,
         tiempo_retencion,
         ubicacion_registro,
@@ -281,7 +276,7 @@ export async function POST(request) {
       message: "Documento guardado correctamente",
       data: {
         id_documento,
-        ruta_carpeta: `/uploads/documentos/${id_documento}`,
+        ruta_carpeta: buildRutaCarpetaPublica(id_documento),
         id_area,
         archivos: archivosGuardados.length,
       },

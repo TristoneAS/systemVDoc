@@ -6,10 +6,7 @@ import {
   registrarHistorial,
   resumenArchivosHistorial,
 } from "@/libs/historial_archivos";
-import fs from "fs";
-import path from "path";
-
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "documentos");
+import { eliminarCarpetaDocumento } from "@/libs/almacen_documentos";
 
 export async function GET(request, { params }) {
   try {
@@ -230,11 +227,7 @@ export async function DELETE(request, { params }) {
       },
     });
 
-    // Eliminar archivos físicos
-    const carpetaDocumento = path.join(UPLOAD_DIR, id_documento);
-    if (fs.existsSync(carpetaDocumento)) {
-      fs.rmSync(carpetaDocumento, { recursive: true, force: true });
-    }
+    eliminarCarpetaDocumento(id_documento);
 
     // Eliminar registros de la base de datos (CASCADE eliminará los archivos automáticamente)
     await conn.query("DELETE FROM documentos WHERE id_documento = ?", [

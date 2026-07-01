@@ -43,8 +43,14 @@ import {
   registrarHistorial,
   resumenArchivosHistorial,
 } from "@/libs/historial_archivos";
+import {
+  buildRutaArchivoPublica,
+  buildRutaCarpetaPublica,
+  ensureDocumentosDir,
+  getCarpetaDocumentoFisica,
+  vaciarCarpetaDocumento,
+} from "@/libs/almacen_documentos";
 
-const UPLOAD_DOCS = path.join(process.cwd(), "public", "uploads", "documentos");
 const UPLOAD_SOLICITUDES = path.join(
   process.cwd(),
   "public",
@@ -135,8 +141,8 @@ async function finalizarSolicitudAprobada(connection, sol, id_solicitud) {
       return { error: "Ya existe un documento con ese ID", status: 409 };
     }
 
-    const carpetaDestino = path.join(UPLOAD_DOCS, sol.id_documento);
-    ensureDir(carpetaDestino);
+    const carpetaDestino = getCarpetaDocumentoFisica(sol.id_documento);
+    ensureDocumentosDir(carpetaDestino);
 
     const valoresArchivos = [];
     for (const a of archivosJson) {
@@ -149,7 +155,7 @@ async function finalizarSolicitudAprobada(connection, sol, id_solicitud) {
       }
       const dest = path.join(carpetaDestino, a.nombre_archivo);
       fs.copyFileSync(src, dest);
-      const rutaRel = `/uploads/documentos/${sol.id_documento}/${a.nombre_archivo}`;
+      const rutaRel = buildRutaArchivoPublica(sol.id_documento, a.nombre_archivo);
       valoresArchivos.push([
         sol.id_documento,
         a.nombre_archivo,
@@ -174,7 +180,7 @@ async function finalizarSolicitudAprobada(connection, sol, id_solicitud) {
         sol.nomenclatura,
         sol.nombre_documento,
         sol.id_area ?? null,
-        `/uploads/documentos/${sol.id_documento}`,
+        buildRutaCarpetaPublica(sol.id_documento),
         "activo",
         tiempoIns,
         ubicIns,
@@ -223,18 +229,10 @@ async function finalizarSolicitudAprobada(connection, sol, id_solicitud) {
       [sol.id_documento],
     );
 
-    const carpetaDestino = path.join(UPLOAD_DOCS, sol.id_documento);
-    ensureDir(carpetaDestino);
-    if (fs.existsSync(carpetaDestino)) {
-      for (const name of fs.readdirSync(carpetaDestino)) {
-        const fp = path.join(carpetaDestino, name);
-        try {
-          if (fs.statSync(fp).isFile()) fs.unlinkSync(fp);
-        } catch {
-          /* ignore */
-        }
-      }
-    }
+    vaciarCarpetaDocumento(sol.id_documento);
+
+    const carpetaDestino = getCarpetaDocumentoFisica(sol.id_documento);
+    ensureDocumentosDir(carpetaDestino);
 
     const valoresArchivos = [];
     for (const a of archivosJson) {
@@ -247,7 +245,7 @@ async function finalizarSolicitudAprobada(connection, sol, id_solicitud) {
       }
       const dest = path.join(carpetaDestino, a.nombre_archivo);
       fs.copyFileSync(src, dest);
-      const rutaRel = `/uploads/documentos/${sol.id_documento}/${a.nombre_archivo}`;
+      const rutaRel = buildRutaArchivoPublica(sol.id_documento, a.nombre_archivo);
       valoresArchivos.push([
         sol.id_documento,
         a.nombre_archivo,
