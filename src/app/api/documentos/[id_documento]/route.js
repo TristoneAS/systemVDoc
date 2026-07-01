@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { conn } from "@/libs/system_v_docs";
 import { obtenerDocumentoConArchivos } from "@/libs/documento_detalle";
+import {
+  ACCION_HISTORIAL,
+  registrarHistorial,
+  resumenArchivosHistorial,
+} from "@/libs/historial_archivos";
 import fs from "fs";
 import path from "path";
 
@@ -87,7 +92,8 @@ export async function PATCH(request, { params }) {
     }
 
     const [existing] = await conn.query(
-      "SELECT id_documento, estado, descargado FROM documentos WHERE id_documento = ?",
+      `SELECT id_documento, estado, descargado, nomenclatura, nombre_documento
+       FROM documentos WHERE id_documento = ?`,
       [id_documento],
     );
 
@@ -100,6 +106,8 @@ export async function PATCH(request, { params }) {
 
     const respuesta = { id_documento };
     let message = "Documento actualizado";
+    const empIdActor = String(body.emp_id_actor ?? "").trim() || null;
+    const empNombreActor = String(body.emp_nombre_actor ?? "").trim() || null;
 
     if (tieneEstado) {
       const estadoRaw = String(body.estado ?? "").trim().toLowerCase();
@@ -117,6 +125,18 @@ export async function PATCH(request, { params }) {
           `UPDATE documentos SET estado = ?, fecha_actualizacion = NOW() WHERE id_documento = ?`,
           [estadoRaw, id_documento],
         );
+        await registrarHistorial(conn, {
+          id_documento,
+          accion: ACCION_HISTORIAL.CAMBIO_ESTADO,
+          emp_id_actor: empIdActor,
+          emp_nombre_actor: empNombreActor,
+          detalle:
+            estadoRaw === "activo"
+              ? "Documento habilitado"
+              : "Documento deshabilitado",
+          datos_anteriores: { estado: estadoActual },
+          datos_nuevos: { estado: estadoRaw },
+        });
         message =
           estadoRaw === "activo"
             ? "Documento habilitado correctamente"
@@ -138,6 +158,17 @@ export async function PATCH(request, { params }) {
           `UPDATE documentos SET descargado = ?, fecha_actualizacion = NOW() WHERE id_documento = ?`,
           [descargadoRaw ? 1 : 0, id_documento],
         );
+        await registrarHistorial(conn, {
+          id_documento,
+          accion: ACCION_HISTORIAL.CAMBIO_DESCARGADO,
+          emp_id_actor: empIdActor,
+          emp_nombre_actor: empNombreActor,
+          detalle: descargadoRaw
+            ? "Marcado como descargado"
+            : "Marcado como pendiente de descarga",
+          datos_anteriores: { descargado: descargadoActual },
+          datos_nuevos: { descargado: descargadoRaw },
+        });
         message = descargadoRaw
           ? "Marcado como descargado"
           : "Marcado como pendiente de descarga";
@@ -179,17 +210,25 @@ export async function DELETE(request, { params }) {
     }
 
     // Verificar si el documento existe
-    const [existing] = await conn.query(
-      "SELECT id_documento, ruta_carpeta FROM documentos WHERE id_documento = ?",
-      [id_documento],
-    );
+    const documento = await obtenerDocumentoConArchivos(id_documento);
 
-    if (existing.length === 0) {
+    if (!documento) {
       return NextResponse.json(
         { error: "Documento no encontrado" },
         { status: 404 },
       );
     }
+
+    await registrarHistorial(conn, {
+      id_documento,
+      accion: ACCION_HISTORIAL.DOCUMENTO_ELIMINADO,
+      detalle: `Eliminación del documento: ${documento.nombre_documento}`,
+      datos_anteriores: {
+        nomenclatura: documento.nomenclatura,
+        nombre_documento: documento.nombre_documento,
+        archivos: resumenArchivosHistorial(documento.archivos),
+      },
+    });
 
     // Eliminar archivos físicos
     const carpetaDocumento = path.join(UPLOAD_DIR, id_documento);

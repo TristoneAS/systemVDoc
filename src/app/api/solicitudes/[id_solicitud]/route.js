@@ -17,6 +17,13 @@ import {
 import fs from "fs";
 import path from "path";
 import { optionalVarchar200 } from "@/libs/optional_varchar200";
+import { parseOptionalFechaRetencion } from "@/libs/tiempo_retencion";
+import {
+  existeNomenclaturaDocumento,
+  ERROR_NOMENCLATURA_YA_REGISTRADA,
+  normalizarNomenclatura,
+} from "@/libs/nomenclatura_documento";
+import { asignarNombresArchivosDocumento } from "@/libs/archivos_adjuntos";
 import { resolveIdAreaRequerido } from "@/libs/id_area";
 import {
   notificarDemasAprobadoresTrasJefe,
@@ -28,6 +35,14 @@ import {
   notificarSolicitanteSolicitudRechazada,
 } from "@/libs/notificar_solicitante_solicitud";
 import { esEstadoObsoletaValor } from "@/libs/solicitudes_estado";
+import {
+  rechazarSolicitudPorTiempoExcedidoSiAplica,
+} from "@/libs/rechazo_automatico_solicitudes";
+import {
+  ACCION_HISTORIAL,
+  registrarHistorial,
+  resumenArchivosHistorial,
+} from "@/libs/historial_archivos";
 
 const UPLOAD_DOCS = path.join(process.cwd(), "public", "uploads", "documentos");
 const UPLOAD_SOLICITUDES = path.join(
@@ -108,6 +123,9 @@ async function finalizarSolicitudAprobada(connection, sol, id_solicitud) {
     };
   }
 
+  let archivosAnteriores = [];
+  let historialCierre = null;
+
   if (sol.tipo === "nuevo") {
     const [exists] = await connection.query(
       `SELECT id_documento FROM documentos WHERE id_documento = ?`,
@@ -141,7 +159,7 @@ async function finalizarSolicitudAprobada(connection, sol, id_solicitud) {
       ]);
     }
 
-    const tiempoIns = optionalVarchar200(sol.tiempo_retencion);
+    const tiempoIns = parseOptionalFechaRetencion(sol.tiempo_retencion).value;
     const ubicIns = optionalVarchar200(sol.ubicacion_registro);
 
     await connection.query(
@@ -169,6 +187,19 @@ async function finalizarSolicitudAprobada(connection, sol, id_solicitud) {
         [valoresArchivos],
       );
     }
+
+    historialCierre = {
+      id_documento: sol.id_documento,
+      id_solicitud,
+      accion: ACCION_HISTORIAL.ALTA_POR_APROBACION,
+      detalle: `Solicitud aprobada: documento dado de alta. Motivo: ${sol.motivo || "—"}`,
+      datos_nuevos: {
+        nomenclatura: sol.nomenclatura,
+        nombre_documento: sol.nombre_documento,
+        motivo: sol.motivo,
+        archivos: resumenArchivosHistorial(archivosJson),
+      },
+    };
   } else if (sol.tipo === "cambio") {
     const [docRow] = await connection.query(
       `SELECT id_documento FROM documentos WHERE id_documento = ?`,
@@ -180,6 +211,12 @@ async function finalizarSolicitudAprobada(connection, sol, id_solicitud) {
         status: 400,
       };
     }
+
+    const [filasArchivosPrev] = await connection.query(
+      `SELECT nombre_archivo FROM archivos_documentos WHERE id_documento = ?`,
+      [sol.id_documento],
+    );
+    archivosAnteriores = filasArchivosPrev.map((f) => f.nombre_archivo);
 
     await connection.query(
       `DELETE FROM archivos_documentos WHERE id_documento = ?`,
@@ -227,23 +264,52 @@ async function finalizarSolicitudAprobada(connection, sol, id_solicitud) {
       );
     }
 
-    const trCambio = optionalVarchar200(sol.tiempo_retencion);
+    const trCambio = parseOptionalFechaRetencion(sol.tiempo_retencion).value;
     const urCambio = optionalVarchar200(sol.ubicacion_registro);
-    if (trCambio !== null || urCambio !== null) {
+
+    const sets = [];
+    const params = [];
+    if (trCambio !== null) {
+      sets.push("tiempo_retencion = ?");
+      params.push(trCambio);
+    }
+    if (urCambio !== null) {
+      sets.push("ubicacion_registro = ?");
+      params.push(urCambio);
+    }
+    if (sets.length > 0) {
+      params.push(sol.id_documento);
       await connection.query(
-        `UPDATE documentos SET
-            tiempo_retencion = COALESCE(?, tiempo_retencion),
-            ubicacion_registro = COALESCE(?, ubicacion_registro)
-           WHERE id_documento = ?`,
-        [trCambio, urCambio, sol.id_documento],
+        `UPDATE documentos SET ${sets.join(", ")} WHERE id_documento = ?`,
+        params,
       );
     }
+
+    historialCierre = {
+      id_documento: sol.id_documento,
+      id_solicitud,
+      accion: ACCION_HISTORIAL.CAMBIO_ARCHIVOS,
+      detalle: `Solicitud aprobada: archivos actualizados. Motivo: ${sol.motivo || "—"}`,
+      datos_anteriores: {
+        archivos: archivosAnteriores,
+      },
+      datos_nuevos: {
+        motivo: sol.motivo,
+        tiempo_retencion: trCambio,
+        ubicacion_registro: urCambio,
+        archivos: resumenArchivosHistorial(archivosJson),
+      },
+    };
   }
 
   await connection.query(
     `UPDATE solicitudes SET estado = 'aprobada', fecha_resolucion = NOW() WHERE id_solicitud = ?`,
     [id_solicitud],
   );
+
+  if (historialCierre) {
+    await registrarHistorial(connection, historialCierre);
+  }
 
   return {
     message:
@@ -275,6 +341,29 @@ async function procesarVistoBueno(
       status: 400,
     };
   }
+
+  const [solRow] = await connection.query(
+    `SELECT id_documento, tipo, motivo FROM solicitudes WHERE id_solicitud = ?`,
+    [id_solicitud],
+  );
+  const solInfo = solRow[0] ?? {};
+  const [actorRow] = await connection.query(
+    `SELECT emp_nombre, tipo_aprobador FROM aprobaciones
+     WHERE id_solicitud = ? AND TRIM(emp_id) = ? AND status = 'aprobado'
+     ORDER BY id DESC LIMIT 1`,
+    [id_solicitud, empIdActor],
+  );
+  const actorInfo = actorRow[0] ?? {};
+
+  await registrarHistorial(connection, {
+    id_documento: solInfo.id_documento,
+    id_solicitud,
+    accion: ACCION_HISTORIAL.VISTO_BUENO,
+    emp_id_actor: empIdActor,
+    emp_nombre_actor: actorInfo.emp_nombre ?? null,
+    detalle: `Visto bueno (${actorInfo.tipo_aprobador || "aprobador"}): ${comentario}`,
+    datos_nuevos: { tipo_solicitud: solInfo.tipo, comentario },
+  });
 
   await actualizarEstadoSolicitudPorAprobaciones(connection, id_solicitud);
 
@@ -344,7 +433,7 @@ export async function PATCH(request, { params }) {
     }
 
     const [rowsObs] = await conn.query(
-      `SELECT id_solicitud, estado FROM solicitudes WHERE id_solicitud = ?`,
+      `SELECT id_solicitud, id_documento, estado FROM solicitudes WHERE id_solicitud = ?`,
       [id_solicitud],
     );
     if (rowsObs.length === 0) {
@@ -393,6 +482,13 @@ export async function PATCH(request, { params }) {
       );
     }
 
+    await registrarHistorial(conn, {
+      id_documento: rowsObs[0]?.id_documento ?? null,
+      id_solicitud,
+      accion: ACCION_HISTORIAL.SOLICITUD_OBSOLETA,
+      detalle: "Solicitud marcada como obsoleta por administrador",
+    });
+
     return NextResponse.json({
       success: true,
       message: "Solicitud marcada como obsoleta",
@@ -426,6 +522,17 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: comentarioRes.error }, { status: 400 });
     }
     comentario = comentarioRes.value;
+  }
+
+  try {
+    await rechazarSolicitudPorTiempoExcedidoSiAplica(conn, id_solicitud, {
+      request,
+    });
+  } catch (rechazoErr) {
+    console.error(
+      `Error al evaluar rechazo automático solicitud #${id_solicitud}:`,
+      rechazoErr,
+    );
   }
 
   const connection = await conn.getConnection();
@@ -519,6 +626,22 @@ export async function PATCH(request, { params }) {
         `UPDATE solicitudes SET estado = 'rechazada', fecha_resolucion = NOW() WHERE id_solicitud = ?`,
         [id_solicitud],
       );
+
+      await registrarHistorial(connection, {
+        id_documento: sol.id_documento,
+        id_solicitud,
+        accion: ACCION_HISTORIAL.SOLICITUD_RECHAZADA,
+        emp_id_actor: emp_id_actor,
+        emp_nombre_actor: infoRechazo.emp_nombre ?? null,
+        detalle: `Solicitud rechazada: ${comentario}`,
+        datos_nuevos: {
+          tipo_aprobador: infoRechazo.tipo_aprobador,
+          comentario,
+          tipo_solicitud: sol.tipo,
+          motivo: sol.motivo,
+        },
+      });
+
       await connection.commit();
 
       let notificacionSolicitante = null;
@@ -757,6 +880,19 @@ export async function PUT(request, { params }) {
       String(id_solicitud),
     );
 
+    let nomenclaturaArchivo = sol.nomenclatura;
+    let nombreDocumentoArchivo = sol.nombre_documento;
+    if (sol.tipo === "nuevo") {
+      const nomenclaturaRaw = formData.get("nomenclatura");
+      const nombreDocRaw = formData.get("nombre_documento");
+      if (nomenclaturaRaw != null && String(nomenclaturaRaw).trim()) {
+        nomenclaturaArchivo = String(nomenclaturaRaw).trim();
+      }
+      if (nombreDocRaw != null && String(nombreDocRaw).trim()) {
+        nombreDocumentoArchivo = String(nombreDocRaw).trim();
+      }
+    }
+
     let archivosGuardados = normalizeArchivosJson(sol.archivos_json);
 
     if (archivosNuevos.length > 0) {
@@ -772,8 +908,13 @@ export async function PUT(request, { params }) {
         }
       }
       archivosGuardados = [];
-      for (const archivo of archivosNuevos) {
-        const nombreArchivo = archivo.name;
+      const nombresArchivo = asignarNombresArchivosDocumento(archivosNuevos, {
+        nomenclatura: nomenclaturaArchivo,
+        nombreDocumento: nombreDocumentoArchivo,
+      });
+      for (let i = 0; i < archivosNuevos.length; i++) {
+        const archivo = archivosNuevos[i];
+        const nombreArchivo = nombresArchivo[i];
         const buffer = Buffer.from(await archivo.arrayBuffer());
         fs.writeFileSync(path.join(carpeta, nombreArchivo), buffer);
         archivosGuardados.push({
@@ -794,9 +935,17 @@ export async function PUT(request, { params }) {
     }
 
     const ruta_carpeta = `/uploads/solicitudes/${tipoCarpeta}/${id_solicitud}`;
-    const tiempo_retencion = optionalVarchar200(
+    const tiempoRetencionRes = parseOptionalFechaRetencion(
       formData.get("tiempo_retencion"),
     );
+    if (tiempoRetencionRes.error) {
+      await connection.rollback();
+      return NextResponse.json(
+        { error: tiempoRetencionRes.error },
+        { status: 400 },
+      );
+    }
+    const tiempo_retencion = tiempoRetencionRes.value;
     const ubicacion_registro = optionalVarchar200(
       formData.get("ubicacion_registro"),
     );
@@ -831,8 +980,17 @@ export async function PUT(request, { params }) {
       }
       id_area = areaRes.id_area;
       fecha_alta = fechaAltaRaw;
-      nomenclatura = String(nomenclaturaRaw).trim();
+      nomenclatura = normalizarNomenclatura(nomenclaturaRaw);
       nombre_documento = String(nombreDocRaw).trim();
+
+      if (await existeNomenclaturaDocumento(connection, nomenclatura)) {
+        await connection.rollback();
+        return NextResponse.json(
+          { error: ERROR_NOMENCLATURA_YA_REGISTRADA },
+          { status: 409 },
+        );
+      }
+
       motivo = normalizeMotivoSolicitud(
         formData.get("motivo"),
         `Alta de nuevo documento: ${nombre_documento}`,
@@ -899,6 +1057,20 @@ export async function PUT(request, { params }) {
     }
 
     await connection.commit();
+
+    await registrarHistorial(connection, {
+      id_documento: sol.id_documento,
+      id_solicitud,
+      accion: ACCION_HISTORIAL.SOLICITUD_REENVIADA,
+      emp_id_actor: emp_id_actor,
+      emp_nombre_actor: sol.solicitante ?? null,
+      detalle: `Solicitud reenviada. Motivo: ${motivo}`,
+      datos_nuevos: {
+        tipo: sol.tipo,
+        motivo,
+        archivos: resumenArchivosHistorial(archivosGuardados),
+      },
+    });
 
     let notificacionCorreo = null;
     try {

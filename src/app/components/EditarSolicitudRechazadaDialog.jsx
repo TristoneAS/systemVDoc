@@ -12,7 +12,6 @@ import {
   Grid,
   Alert,
   Box,
-  CircularProgress,
   FormControl,
   InputLabel,
   Select,
@@ -39,6 +38,15 @@ import FormSection, {
   disabledFieldSx,
   sectionTitleSx,
 } from "./FormSection";
+import LoadingModal from "./LoadingModal";
+import {
+  combinarArchivosAlSubir,
+  renombrarArchivosDocumento,
+} from "@/libs/archivos_adjuntos";
+import CampoFechaRetencion from "./CampoFechaRetencion";
+import { retencionValorParaForm } from "@/libs/tiempo_retencion";
+import { useVerificarNomenclaturaDocumento } from "@/app/hooks/useVerificarNomenclaturaDocumento";
+import { ERROR_NOMENCLATURA_YA_REGISTRADA } from "@/libs/nomenclatura_documento";
 
 function getFileIcon(file) {
   const type = file.type || "";
@@ -81,6 +89,11 @@ export default function EditarSolicitudRechazadaDialog({
     : [];
   const esNuevo = solicitud?.tipo === "nuevo";
 
+  const { verificando: nomenclaturaVerificando, yaRegistrada: nomenclaturaYaRegistrada } =
+    useVerificarNomenclaturaDocumento(nomenclatura, {
+      habilitado: open && esNuevo,
+    });
+
   useEffect(() => {
     if (!open || !solicitud) return;
     setMotivo(String(solicitud.motivo ?? ""));
@@ -96,7 +109,7 @@ export default function EditarSolicitudRechazadaDialog({
         ? String(solicitud.id_area)
         : "",
     );
-    setTiempoRetencion(String(solicitud.tiempo_retencion ?? ""));
+    setTiempoRetencion(retencionValorParaForm(solicitud.tiempo_retencion));
     setUbicacionRegistro(String(solicitud.ubicacion_registro ?? ""));
     setArchivosNuevos([]);
     setError("");
@@ -124,27 +137,23 @@ export default function EditarSolicitudRechazadaDialog({
     };
   }, [open, esNuevo]);
 
+  const ctxRenombreArchivos = () => ({
+    nomenclatura: esNuevo ? nomenclatura : String(solicitud?.nomenclatura ?? ""),
+    nombreDocumento: esNuevo
+      ? nombreDocumento
+      : String(solicitud?.nombre_documento ?? ""),
+  });
+
   const handleFileUpload = (event) => {
     const files = Array.from(event.target.files);
-    const allowedTypes = [
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/vnd.ms-excel",
-      "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/vnd.ms-powerpoint",
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    ];
-    const valid = files.filter((file) => {
-      if (!allowedTypes.includes(file.type)) {
-        alert(
-          `El archivo ${file.name} no es un formato válido. Solo Excel, PDF, Word y PowerPoint.`,
-        );
-        return false;
-      }
-      return true;
-    });
-    setArchivosNuevos((prev) => [...prev, ...valid]);
+    event.target.value = "";
+    const { archivos, mensajes } = combinarArchivosAlSubir(
+      archivosNuevos,
+      files,
+      ctxRenombreArchivos(),
+    );
+    mensajes.forEach((m) => alert(m));
+    setArchivosNuevos(archivos);
   };
 
   const handleSubmit = async () => {
@@ -164,6 +173,14 @@ export default function EditarSolicitudRechazadaDialog({
     if (esNuevo) {
       if (!nomenclatura.trim() || !nombreDocumento.trim()) {
         setError("Nomenclatura y nombre del documento son requeridos.");
+        return;
+      }
+      if (nomenclaturaVerificando) {
+        setError("Verificando nomenclatura…");
+        return;
+      }
+      if (nomenclaturaYaRegistrada) {
+        setError(ERROR_NOMENCLATURA_YA_REGISTRADA);
         return;
       }
       if (!idArea.trim()) {
@@ -208,7 +225,9 @@ export default function EditarSolicitudRechazadaDialog({
         );
       }
 
-      archivosNuevos.forEach((f) => fd.append("archivos", f));
+      renombrarArchivosDocumento(archivosNuevos, ctxRenombreArchivos()).forEach(
+        (f) => fd.append("archivos", f),
+      );
 
       const res = await fetch(`/api/solicitudes/${solicitud.id_solicitud}`, {
         method: "PUT",
@@ -329,7 +348,20 @@ export default function EditarSolicitudRechazadaDialog({
                     onChange={(e) =>
                       setNomenclatura(e.target.value.toUpperCase())
                     }
-                    sx={textFieldSx}
+                    error={nomenclaturaYaRegistrada}
+                    helperText={
+                      nomenclaturaVerificando
+                        ? "Verificando nomenclatura…"
+                        : nomenclaturaYaRegistrada
+                          ? ERROR_NOMENCLATURA_YA_REGISTRADA
+                          : undefined
+                    }
+                    sx={{
+                      ...textFieldSx,
+                      "& .MuiFormHelperText-root": {
+                        color: nomenclaturaYaRegistrada ? "#b91c1c" : "#757575",
+                      },
+                    }}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
@@ -367,13 +399,10 @@ export default function EditarSolicitudRechazadaDialog({
         >
           <Grid container spacing={2.5}>
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Tiempo de retención"
+              <CampoFechaRetencion
                 value={tiempoRetencion}
-                onChange={(e) => setTiempoRetencion(e.target.value)}
-                placeholder="Ej. 5 años"
-                sx={textFieldSx}
+                onChange={setTiempoRetencion}
+                textFieldSx={textFieldSx}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -567,13 +596,14 @@ export default function EditarSolicitudRechazadaDialog({
             "&:hover": { bgcolor: "#BBDEFB" },
           }}
         >
-          {loading ? (
-            <CircularProgress size={22} sx={{ color: "#1976D2" }} />
-          ) : (
-            "Guardar y reenviar a aprobación"
-          )}
+          Guardar y reenviar a aprobación
         </Button>
       </DialogActions>
+
+      <LoadingModal
+        open={loading}
+        message="Guardando y reenviando solicitud…"
+      />
     </Dialog>
   );
 }

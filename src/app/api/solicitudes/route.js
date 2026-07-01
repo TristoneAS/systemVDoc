@@ -5,6 +5,16 @@ import { getNextIdDocumento } from "@/libs/next_id_documento";
 import { resolveIdAreaRequerido } from "@/libs/id_area";
 import { crearAprobacionesSolicitud } from "@/libs/aprobaciones";
 import { optionalVarchar200 } from "@/libs/optional_varchar200";
+import { parseOptionalFechaRetencion } from "@/libs/tiempo_retencion";
+import {
+  existeNomenclaturaDocumento,
+  ERROR_NOMENCLATURA_YA_REGISTRADA,
+  normalizarNomenclatura,
+} from "@/libs/nomenclatura_documento";
+import {
+  validarArchivosAdjuntos,
+  asignarNombresArchivosDocumento,
+} from "@/libs/archivos_adjuntos";
 import {
   notificarJefeDirectoSolicitudCreada,
   resolveAppBaseUrl,
@@ -13,6 +23,12 @@ import {
   filtrarSolicitudesPorObsoletas,
   sqlExcluirObsoletas,
 } from "@/libs/solicitudes_estado";
+import { rechazarSolicitudesPorTiempoExcedido } from "@/libs/rechazo_automatico_solicitudes";
+import {
+  ACCION_HISTORIAL,
+  registrarHistorial,
+  resumenArchivosHistorial,
+} from "@/libs/historial_archivos";
 import fs from "fs";
 import path from "path";
 
@@ -44,6 +60,15 @@ function normalizeMotivoSolicitud(raw, fallbackSiVacio = "Sin descripción") {
 
 export async function GET(request) {
   try {
+    try {
+      await rechazarSolicitudesPorTiempoExcedido(conn, { request });
+    } catch (rechazoErr) {
+      console.error(
+        "Error al aplicar rechazo automático por tiempo excedido:",
+        rechazoErr,
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const forEmpId = String(searchParams.get("for_emp_id") || "").trim();
     const solicitanteEmpId = String(
@@ -145,14 +170,24 @@ export async function POST(request) {
 
     if (tipo === "nuevo") {
       const fecha_alta = formData.get("fecha_alta");
-      const nomenclatura = formData.get("nomenclatura");
+      const nomenclatura = normalizarNomenclatura(formData.get("nomenclatura"));
       const nombre_documento = formData.get("nombre_documento");
       const id_area_raw = formData.get("id_area");
       const emp_id_solicitante = String(
         formData.get("emp_id_solicitante") || "",
       ).trim();
       const solicitante = String(formData.get("solicitante") || "").trim();
-      const archivos = formData.getAll("archivos");
+      const archivos = formData
+        .getAll("archivos")
+        .filter((a) => a instanceof File && a.size > 0);
+
+      const validacionArchivos = validarArchivosAdjuntos(archivos);
+      if (!validacionArchivos.ok) {
+        return NextResponse.json(
+          { error: validacionArchivos.error },
+          { status: 400 },
+        );
+      }
 
       if (!fecha_alta || !nomenclatura || !nombre_documento) {
         return NextResponse.json(
@@ -179,6 +214,13 @@ export async function POST(request) {
       }
       const { id_area } = areaRes;
 
+      if (await existeNomenclaturaDocumento(conn, nomenclatura)) {
+        return NextResponse.json(
+          { error: ERROR_NOMENCLATURA_YA_REGISTRADA },
+          { status: 409 },
+        );
+      }
+
       const id_documento = await getNextIdDocumento();
 
       const motivoNorm = normalizeMotivoSolicitud(
@@ -186,9 +228,16 @@ export async function POST(request) {
         `Alta de nuevo documento: ${nombre_documento}`,
       );
 
-      const tiempo_retencion = optionalVarchar200(
+      const tiempoRetencionRes = parseOptionalFechaRetencion(
         formData.get("tiempo_retencion"),
       );
+      if (tiempoRetencionRes.error) {
+        return NextResponse.json(
+          { error: tiempoRetencionRes.error },
+          { status: 400 },
+        );
+      }
+      const tiempo_retencion = tiempoRetencionRes.value;
       const ubicacion_registro = optionalVarchar200(
         formData.get("ubicacion_registro"),
       );
@@ -217,18 +266,24 @@ export async function POST(request) {
       ensureDir(carpeta);
 
       const archivosGuardados = [];
-      for (const archivo of archivos) {
-        if (archivo instanceof File && archivo.size > 0) {
-          const nombreArchivo = archivo.name;
-          const buffer = Buffer.from(await archivo.arrayBuffer());
-          fs.writeFileSync(path.join(carpeta, nombreArchivo), buffer);
-          archivosGuardados.push({
-            nombre_archivo: nombreArchivo,
-            ruta_archivo: `/uploads/solicitudes/nuevo/${id_solicitud}/${nombreArchivo}`,
-            tipo_archivo: archivo.type || path.extname(nombreArchivo),
-            tamano_archivo: archivo.size,
-          });
-        }
+      const archivosValidos = archivos.filter(
+        (archivo) => archivo instanceof File && archivo.size > 0,
+      );
+      const nombresArchivo = asignarNombresArchivosDocumento(archivosValidos, {
+        nomenclatura,
+        nombreDocumento: nombre_documento,
+      });
+      for (let i = 0; i < archivosValidos.length; i++) {
+        const archivo = archivosValidos[i];
+        const nombreArchivo = nombresArchivo[i];
+        const buffer = Buffer.from(await archivo.arrayBuffer());
+        fs.writeFileSync(path.join(carpeta, nombreArchivo), buffer);
+        archivosGuardados.push({
+          nombre_archivo: nombreArchivo,
+          ruta_archivo: `/uploads/solicitudes/nuevo/${id_solicitud}/${nombreArchivo}`,
+          tipo_archivo: archivo.type || path.extname(nombreArchivo),
+          tamano_archivo: archivo.size,
+        });
       }
 
       const ruta_carpeta = `/uploads/solicitudes/nuevo/${id_solicitud}`;
@@ -284,6 +339,21 @@ export async function POST(request) {
         );
       }
 
+      await registrarHistorial(conn, {
+        id_documento,
+        id_solicitud,
+        accion: ACCION_HISTORIAL.SOLICITUD_NUEVO,
+        emp_id_actor: emp_id_solicitante,
+        emp_nombre_actor: solicitante,
+        detalle: `Solicitud de nuevo documento. Motivo: ${motivoNorm}`,
+        datos_nuevos: {
+          nomenclatura,
+          nombre_documento,
+          motivo: motivoNorm,
+          archivos: resumenArchivosHistorial(archivosGuardados),
+        },
+      });
+
       return NextResponse.json({
         success: true,
         message: "Solicitud registrada. Pendiente de aprobación.",
@@ -314,13 +384,30 @@ export async function POST(request) {
         );
       }
 
-      const archivos = formData.getAll("archivos");
+      const archivos = formData
+        .getAll("archivos")
+        .filter((a) => a instanceof File && a.size > 0);
+
+      const validacionArchivos = validarArchivosAdjuntos(archivos);
+      if (!validacionArchivos.ok) {
+        return NextResponse.json(
+          { error: validacionArchivos.error },
+          { status: 400 },
+        );
+      }
 
       const motivoNorm = normalizeMotivoSolicitud(motivo);
 
-      const tiempo_retencion = optionalVarchar200(
+      const tiempoRetencionRes = parseOptionalFechaRetencion(
         formData.get("tiempo_retencion"),
       );
+      if (tiempoRetencionRes.error) {
+        return NextResponse.json(
+          { error: tiempoRetencionRes.error },
+          { status: 400 },
+        );
+      }
+      const tiempo_retencion = tiempoRetencionRes.value;
       const ubicacion_registro = optionalVarchar200(
         formData.get("ubicacion_registro"),
       );
@@ -348,18 +435,24 @@ export async function POST(request) {
       ensureDir(carpeta);
 
       const archivosGuardados = [];
-      for (const archivo of archivos) {
-        if (archivo instanceof File && archivo.size > 0) {
-          const nombreArchivo = archivo.name;
-          const buffer = Buffer.from(await archivo.arrayBuffer());
-          fs.writeFileSync(path.join(carpeta, nombreArchivo), buffer);
-          archivosGuardados.push({
-            nombre_archivo: nombreArchivo,
-            ruta_archivo: `/uploads/solicitudes/cambio/${id_solicitud}/${nombreArchivo}`,
-            tipo_archivo: archivo.type || path.extname(nombreArchivo),
-            tamano_archivo: archivo.size,
-          });
-        }
+      const archivosValidos = archivos.filter(
+        (archivo) => archivo instanceof File && archivo.size > 0,
+      );
+      const nombresArchivo = asignarNombresArchivosDocumento(archivosValidos, {
+        nomenclatura,
+        nombreDocumento: nombre_documento,
+      });
+      for (let i = 0; i < archivosValidos.length; i++) {
+        const archivo = archivosValidos[i];
+        const nombreArchivo = nombresArchivo[i];
+        const buffer = Buffer.from(await archivo.arrayBuffer());
+        fs.writeFileSync(path.join(carpeta, nombreArchivo), buffer);
+        archivosGuardados.push({
+          nombre_archivo: nombreArchivo,
+          ruta_archivo: `/uploads/solicitudes/cambio/${id_solicitud}/${nombreArchivo}`,
+          tipo_archivo: archivo.type || path.extname(nombreArchivo),
+          tamano_archivo: archivo.size,
+        });
       }
 
       const ruta_carpeta = `/uploads/solicitudes/cambio/${id_solicitud}`;
@@ -414,6 +507,19 @@ export async function POST(request) {
           mailErr,
         );
       }
+
+      await registrarHistorial(conn, {
+        id_documento,
+        id_solicitud,
+        accion: ACCION_HISTORIAL.SOLICITUD_CAMBIO,
+        emp_id_actor: emp_id_solicitante,
+        emp_nombre_actor: solicitante,
+        detalle: `Solicitud de cambio. Motivo: ${motivoNorm}`,
+        datos_nuevos: {
+          motivo: motivoNorm,
+          archivos: resumenArchivosHistorial(archivosGuardados),
+        },
+      });
 
       return NextResponse.json({
         success: true,

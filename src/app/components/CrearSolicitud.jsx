@@ -15,7 +15,6 @@ import {
   Card,
   CardContent,
   IconButton,
-  CircularProgress,
   List,
   ListItemButton,
   ListItemText,
@@ -37,13 +36,33 @@ import {
 import HexagonMenu from "./HexagonMenu";
 import NuevoDocumento from "./NuevoDocumento";
 import ModalConfirmarCorreoAprobadores from "./ModalConfirmarCorreoAprobadores";
+import LoadingModal from "./LoadingModal";
 import { getSolicitanteParaSolicitud } from "./Solicitudes";
 import FormSection, {
   textFieldSx,
   disabledFieldSx,
   sectionTitleSx,
   stepperSx,
+  splitRowSx,
+  splitCol35Sx,
+  splitCol65Sx,
 } from "./FormSection";
+import {
+  ACCEPT_ARCHIVOS_ADJUNTOS,
+  ARCHIVOS_ADJUNTOS_HINT,
+  MAX_ARCHIVOS_ADJUNTOS,
+  combinarArchivosAlSubir,
+  validarArchivosAdjuntos,
+  renombrarArchivosDocumento,
+} from "@/libs/archivos_adjuntos";
+import CampoFechaRetencion from "./CampoFechaRetencion";
+import { retencionValorParaForm, RETENCION_AL_MAS_ACTUAL_VALOR } from "@/libs/tiempo_retencion";
+import {
+  descargarArchivosDocumentoComoFiles,
+  leerPrefillSolicitudCambio,
+  limpiarPrefillSolicitudCambio,
+  tienePrefillSolicitudCambio,
+} from "@/libs/prefill_solicitud_cambio";
 
 const stepsCambio = ["Documento y motivo", "Cargar archivos"];
 
@@ -69,6 +88,66 @@ function SolicitudCambioDocumento({ onVolver }) {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [modalCorreoOpen, setModalCorreoOpen] = useState(false);
   const [previewCorreoParams, setPreviewCorreoParams] = useState(null);
+  const [prefillLoading, setPrefillLoading] = useState(false);
+  const [prefillDesdePorVencer, setPrefillDesdePorVencer] = useState(false);
+  const [prefillError, setPrefillError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const prefill = leerPrefillSolicitudCambio();
+      if (!prefill?.documento?.id_documento) return;
+
+      setPrefillLoading(true);
+      setPrefillError("");
+      setPrefillDesdePorVencer(true);
+
+      const doc = prefill.documento;
+      setBusqueda(String(doc.nomenclatura ?? ""));
+      setDocumentoSeleccionado(doc);
+      setResultados([doc]);
+      setUbicacionRegistro(
+        String(
+          prefill.ubicacion_registro ?? doc.ubicacion_registro ?? "",
+        ).trim(),
+      );
+      setTiempoRetencion("");
+      setMotivo(String(prefill.motivo ?? "").trim());
+
+      try {
+        const archivosMeta = prefill.archivos ?? [];
+        if (archivosMeta.length > 0) {
+          const files = await descargarArchivosDocumentoComoFiles(archivosMeta);
+          if (!cancelled) {
+            setFormData({
+              archivos: renombrarArchivosDocumento(files, {
+                nomenclatura: doc.nomenclatura ?? "",
+                nombreDocumento: doc.nombre_documento ?? "",
+              }),
+            });
+          }
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setPrefillError(
+            e?.message ||
+              "No se pudieron cargar todos los archivos del documento.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          limpiarPrefillSolicitudCambio();
+        }
+        setPrefillLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      setPrefillLoading(false);
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -91,6 +170,7 @@ function SolicitudCambioDocumento({ onVolver }) {
     } catch (e) {
       console.error(e);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const buscarEmpleadoSolicitante = async (empId) => {
@@ -112,7 +192,7 @@ function SolicitudCambioDocumento({ onVolver }) {
   const handleBuscarDocumentos = async () => {
     const q = busqueda.trim();
     if (!q) {
-      setErrorBusqueda("Escriba una nomenclatura o parte de ella");
+      setErrorBusqueda("Escriba la nomenclatura completa");
       return;
     }
     setBuscando(true);
@@ -136,7 +216,7 @@ function SolicitudCambioDocumento({ onVolver }) {
         setErrorBusqueda("No se encontraron documentos con esa nomenclatura");
       } else if (list.length === 1) {
         setDocumentoSeleccionado(list[0]);
-        setTiempoRetencion(String(list[0].tiempo_retencion ?? ""));
+        setTiempoRetencion(retencionValorParaForm(list[0].tiempo_retencion));
         setUbicacionRegistro(String(list[0].ubicacion_registro ?? ""));
       }
     } catch (e) {
@@ -165,8 +245,9 @@ function SolicitudCambioDocumento({ onVolver }) {
   };
 
   const validateStep1 = () => {
-    if (formData.archivos.length === 0) {
-      setSubmitError("Adjunte al menos un archivo de referencia o borrador");
+    const validacion = validarArchivosAdjuntos(formData.archivos);
+    if (!validacion.ok) {
+      setSubmitError(validacion.error);
       return false;
     }
     setSubmitError("");
@@ -182,37 +263,31 @@ function SolicitudCambioDocumento({ onVolver }) {
     setActiveStep((s) => s - 1);
   };
 
+  const ctxRenombreArchivos = () => ({
+    nomenclatura: documentoSeleccionado?.nomenclatura ?? "",
+    nombreDocumento: documentoSeleccionado?.nombre_documento ?? "",
+  });
+
   const handleFileUpload = (event) => {
     const files = Array.from(event.target.files);
-    const allowedTypes = [
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/vnd.ms-excel",
-      "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/vnd.ms-powerpoint",
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    ];
-    const validFiles = files.filter((file) => {
-      if (!allowedTypes.includes(file.type)) {
-        alert(
-          `El archivo ${file.name} no es un formato válido. Solo Excel, PDF, Word y PowerPoint.`,
-        );
-        return false;
-      }
-      return true;
-    });
-    setFormData((prev) => ({
-      ...prev,
-      archivos: [...prev.archivos, ...validFiles],
-    }));
+    event.target.value = "";
+    const { archivos, mensajes } = combinarArchivosAlSubir(
+      formData.archivos,
+      files,
+      ctxRenombreArchivos(),
+    );
+    mensajes.forEach((m) => alert(m));
+    setFormData((prev) => ({ ...prev, archivos }));
   };
 
   const handleRemoveFile = (index) => {
-    setFormData((prev) => ({
-      ...prev,
-      archivos: prev.archivos.filter((_, i) => i !== index),
-    }));
+    setFormData((prev) => {
+      const archivos = prev.archivos.filter((_, i) => i !== index);
+      return {
+        ...prev,
+        archivos: renombrarArchivosDocumento(archivos, ctxRenombreArchivos()),
+      };
+    });
   };
 
   const getFileIcon = (file) => {
@@ -253,7 +328,7 @@ function SolicitudCambioDocumento({ onVolver }) {
 
   const handleSubmit = async () => {
     if (!validateStep1()) {
-      return;
+      return false;
     }
 
     setLoading(true);
@@ -277,13 +352,15 @@ function SolicitudCambioDocumento({ onVolver }) {
           "No hay emp_id o emp_nombre del solicitante en la sesión (infoUser). Inicie sesión de nuevo.",
         );
         setLoading(false);
-        return;
+        return false;
       }
       fd.append("emp_id_solicitante", emp_id_solicitante.trim());
       fd.append("solicitante", solicitante.trim());
       fd.append("tiempo_retencion", tiempo_retencion);
       fd.append("ubicacion_registro", ubicacion_registro);
-      formData.archivos.forEach((f) => fd.append("archivos", f));
+      renombrarArchivosDocumento(formData.archivos, ctxRenombreArchivos()).forEach(
+        (f) => fd.append("archivos", f),
+      );
 
       const response = await fetch("/api/solicitudes", {
         method: "POST",
@@ -292,7 +369,7 @@ function SolicitudCambioDocumento({ onVolver }) {
       const data = await response.json();
       if (!response.ok) {
         setSubmitError(data.error || "Error al enviar la solicitud");
-        return;
+        return false;
       }
       setSubmitSuccess(true);
       setTimeout(() => {
@@ -306,8 +383,10 @@ function SolicitudCambioDocumento({ onVolver }) {
         setActiveStep(0);
         setSubmitSuccess(false);
       }, 2200);
+      return true;
     } catch (e) {
       setSubmitError("Error de conexión. Intente nuevamente.");
+      return false;
     } finally {
       setLoading(false);
     }
@@ -320,7 +399,7 @@ function SolicitudCambioDocumento({ onVolver }) {
           <Box>
             <FormSection
               title="Buscar documento"
-              subtitle="Escriba la nomenclatura o parte del código y seleccione el registro."
+              subtitle="Escriba la nomenclatura exacta y seleccione el registro."
             >
               <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
                 <TextField
@@ -331,18 +410,12 @@ function SolicitudCambioDocumento({ onVolver }) {
                   onKeyDown={(e) =>
                     e.key === "Enter" && handleBuscarDocumentos()
                   }
-                  placeholder="Ej. código o parte del código"
+                  placeholder="Ej. código completo del documento"
                   sx={{ flex: 1, minWidth: 200, ...textFieldSx }}
                 />
                 <Button
                   variant="contained"
-                  startIcon={
-                    buscando ? (
-                      <CircularProgress size={20} color="inherit" />
-                    ) : (
-                      <Search />
-                    )
-                  }
+                  startIcon={<Search />}
                   onClick={handleBuscarDocumentos}
                   disabled={buscando}
                   sx={{
@@ -367,7 +440,9 @@ function SolicitudCambioDocumento({ onVolver }) {
               )}
               {resultados.length > 1 && (
                 <Box sx={{ mt: 2 }}>
-                  <Typography sx={{ color: "#757575", mb: 1, fontSize: "0.875rem" }}>
+                  <Typography
+                    sx={{ color: "#757575", mb: 1, fontSize: "0.875rem" }}
+                  >
                     Seleccione el documento:
                   </Typography>
                   <List
@@ -387,7 +462,9 @@ function SolicitudCambioDocumento({ onVolver }) {
                         }
                         onClick={() => {
                           setDocumentoSeleccionado(doc);
-                          setTiempoRetencion(String(doc.tiempo_retencion ?? ""));
+                          setTiempoRetencion(
+                            retencionValorParaForm(doc.tiempo_retencion),
+                          );
                           setUbicacionRegistro(
                             String(doc.ubicacion_registro ?? ""),
                           );
@@ -397,7 +474,9 @@ function SolicitudCambioDocumento({ onVolver }) {
                           primary={doc.nombre_documento}
                           secondary={`${doc.nomenclatura} · ${doc.id_documento}`}
                           primaryTypographyProps={{ sx: { color: "#1976D2" } }}
-                          secondaryTypographyProps={{ sx: { color: "#757575" } }}
+                          secondaryTypographyProps={{
+                            sx: { color: "#757575" },
+                          }}
                         />
                       </ListItemButton>
                     ))}
@@ -482,18 +561,22 @@ function SolicitudCambioDocumento({ onVolver }) {
               title="Información adicional"
               subtitle="Opcional. Al aprobar el cambio, estos valores se actualizarán en el catálogo."
             >
-              <Grid container spacing={2.5}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Tiempo de retención"
+              <Box sx={splitRowSx}>
+                <Box sx={splitCol35Sx}>
+                  <CampoFechaRetencion
                     value={tiempo_retencion}
-                    onChange={(e) => setTiempoRetencion(e.target.value)}
-                    placeholder="Ej. 5 años"
-                    sx={textFieldSx}
+                    onChange={setTiempoRetencion}
+                    textFieldSx={textFieldSx}
+                    helperText={
+                      prefillDesdePorVencer
+                        ? "Indique la nueva fecha de retención del documento."
+                        : tiempo_retencion === RETENCION_AL_MAS_ACTUAL_VALOR
+                          ? "Desmarque «Al más actual» para ingresar otra fecha."
+                          : undefined
+                    }
                   />
-                </Grid>
-                <Grid item xs={12} sm={6}>
+                </Box>
+                <Box sx={splitCol65Sx}>
                   <TextField
                     fullWidth
                     label="Ubicación del registro"
@@ -502,16 +585,16 @@ function SolicitudCambioDocumento({ onVolver }) {
                     placeholder="Ej. Servidor / carpeta"
                     sx={textFieldSx}
                   />
-                </Grid>
-              </Grid>
+                </Box>
+              </Box>
             </FormSection>
 
             <FormSection
               title="Solicitante"
               subtitle="Datos tomados de su perfil de sesión."
             >
-              <Grid container spacing={2.5}>
-                <Grid item xs={12} sm={6}>
+              <Box sx={splitRowSx}>
+                <Box sx={splitCol35Sx}>
                   <TextField
                     fullWidth
                     label="ID empleado solicitante"
@@ -523,8 +606,8 @@ function SolicitudCambioDocumento({ onVolver }) {
                     }
                     sx={disabledFieldSx}
                   />
-                </Grid>
-                <Grid item xs={12} sm={6}>
+                </Box>
+                <Box sx={splitCol65Sx}>
                   <TextField
                     fullWidth
                     label="Solicitante"
@@ -532,8 +615,8 @@ function SolicitudCambioDocumento({ onVolver }) {
                     disabled
                     sx={disabledFieldSx}
                   />
-                </Grid>
-              </Grid>
+                </Box>
+              </Box>
             </FormSection>
           </Box>
         );
@@ -542,7 +625,7 @@ function SolicitudCambioDocumento({ onVolver }) {
           <Box>
             <FormSection
               title="Archivos del cambio"
-              subtitle="Adjunte borradores, evidencia o documentos actualizados."
+              subtitle={ARCHIVOS_ADJUNTOS_HINT}
             >
               <Box
                 sx={{
@@ -561,18 +644,20 @@ function SolicitudCambioDocumento({ onVolver }) {
                 }}
               >
                 <input
-                  accept=".xlsx,.xls,.pdf,.doc,.docx,.ppt,.pptx"
+                  accept={ACCEPT_ARCHIVOS_ADJUNTOS}
                   style={{ display: "none" }}
                   id="file-upload-cambio"
                   multiple
                   type="file"
                   onChange={handleFileUpload}
+                  disabled={formData.archivos.length >= MAX_ARCHIVOS_ADJUNTOS}
                 />
                 <label htmlFor="file-upload-cambio">
                   <Button
                     variant="contained"
                     component="span"
                     startIcon={<CloudUpload />}
+                    disabled={formData.archivos.length >= MAX_ARCHIVOS_ADJUNTOS}
                     sx={{
                       backgroundColor: "#FFFFFF",
                       color: "#212121",
@@ -592,73 +677,73 @@ function SolicitudCambioDocumento({ onVolver }) {
                   </Button>
                 </label>
                 <Typography variant="caption" sx={{ color: "#757575", mt: 2 }}>
-                  Excel, PDF, Word y PowerPoint
+                  {ARCHIVOS_ADJUNTOS_HINT}
                 </Typography>
               </Box>
             </FormSection>
             {formData.archivos.length > 0 && (
               <Box sx={{ mt: 1 }}>
                 <Typography sx={{ ...sectionTitleSx, mb: 1.5 }}>
-                  Archivos cargados ({formData.archivos.length})
+                  Archivos cargados ({formData.archivos.length}/{MAX_ARCHIVOS_ADJUNTOS})
                 </Typography>
-              <Grid container spacing={2}>
-                {formData.archivos.map((file, index) => (
-                  <Grid item xs={12} sm={6} md={4} key={index}>
-                    <Card
-                      sx={{
-                        bgcolor: "#E3F2FD",
-                        border: "1px solid rgba(25, 118, 210, 0.16)",
-                      }}
-                    >
-                      <CardContent>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                          }}
-                        >
+                <Grid container spacing={2}>
+                  {formData.archivos.map((file, index) => (
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
+                      <Card
+                        sx={{
+                          bgcolor: "#E3F2FD",
+                          border: "1px solid rgba(25, 118, 210, 0.16)",
+                        }}
+                      >
+                        <CardContent>
                           <Box
                             sx={{
                               display: "flex",
                               alignItems: "center",
-                              gap: 1,
+                              justifyContent: "space-between",
                             }}
                           >
-                            {getFileIcon(file)}
-                            <Box>
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  color: "#1976D2",
-                                  fontWeight: 500,
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  maxWidth: 150,
-                                }}
-                              >
-                                {file.name}
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                sx={{ color: "#757575" }}
-                              >
-                                {(file.size / 1024).toFixed(2)} KB
-                              </Typography>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                              }}
+                            >
+                              {getFileIcon(file)}
+                              <Box>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    color: "#1976D2",
+                                    fontWeight: 500,
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    maxWidth: 150,
+                                  }}
+                                >
+                                  {file.name}
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  sx={{ color: "#757575" }}
+                                >
+                                  {(file.size / 1024).toFixed(2)} KB
+                                </Typography>
+                              </Box>
                             </Box>
+                            <IconButton
+                              onClick={() => handleRemoveFile(index)}
+                              sx={{ color: "#1976D2" }}
+                            >
+                              <Delete />
+                            </IconButton>
                           </Box>
-                          <IconButton
-                            onClick={() => handleRemoveFile(index)}
-                            sx={{ color: "#1976D2" }}
-                          >
-                            <Delete />
-                          </IconButton>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
               </Box>
             )}
           </Box>
@@ -701,6 +786,23 @@ function SolicitudCambioDocumento({ onVolver }) {
         archivos para enviar la solicitud.
       </Typography>
 
+      {prefillDesdePorVencer && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Datos cargados desde documentos por vencer. Indique la{" "}
+          <strong>nueva fecha de retención</strong> antes de enviar la solicitud.
+        </Alert>
+      )}
+
+      {prefillError && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 2 }}
+          onClose={() => setPrefillError("")}
+        >
+          {prefillError}
+        </Alert>
+      )}
+
       <Stepper activeStep={activeStep} sx={stepperSx}>
         {stepsCambio.map((label) => (
           <Step key={label}>
@@ -739,42 +841,47 @@ function SolicitudCambioDocumento({ onVolver }) {
         </Alert>
       )}
 
-      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-        <Button
-          disabled={activeStep === 0 || loading}
-          onClick={handleBack}
-          sx={{ color: "#1976D2" }}
-        >
-          Atrás
-        </Button>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: activeStep > 0 ? "space-between" : "flex-end",
+        }}
+      >
+        {activeStep > 0 && (
+          <Button
+            disabled={loading}
+            onClick={handleBack}
+            sx={{ color: "#1976D2" }}
+          >
+            Atrás
+          </Button>
+        )}
         {activeStep === stepsCambio.length - 1 ? (
           <Button
             variant="contained"
             onClick={handleAbrirConfirmacionCorreo}
             disabled={loading}
             sx={{
-              backgroundColor: loading ? "#E0E0E0" : "#E3F2FD",
+              backgroundColor: "#E3F2FD",
               color: "#1976D2",
-              border: loading ? "1px solid #9E9E9E" : "1px solid #1976D2",
+              border: "1px solid #1976D2",
               px: 4,
               py: 1,
               borderRadius: 2,
               fontWeight: 600,
               textTransform: "none",
               "&:hover": {
-                backgroundColor: loading ? "#E0E0E0" : "#BBDEFB",
+                backgroundColor: "#BBDEFB",
                 color: "#1976D2",
+              },
+              "&:disabled": {
+                backgroundColor: "#E0E0E0",
+                color: "#757575",
+                borderColor: "#BDBDBD",
               },
             }}
           >
-            {loading ? (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <CircularProgress size={20} color="inherit" />
-                Enviando…
-              </Box>
-            ) : (
-              "Enviar solicitud de cambio"
-            )}
+            Enviar solicitud de cambio
           </Button>
         ) : (
           <Button
@@ -797,22 +904,39 @@ function SolicitudCambioDocumento({ onVolver }) {
         )}
       </Box>
 
-      <ModalConfirmarCorreoAprobadores
-        open={modalCorreoOpen}
-        onClose={() => setModalCorreoOpen(false)}
-        onConfirm={async () => {
-          setModalCorreoOpen(false);
-          await handleSubmit();
-        }}
-        previewParams={previewCorreoParams}
-        confirming={loading}
+      <LoadingModal open={buscando} message="Buscando documento…" />
+      <LoadingModal
+        open={loading && !modalCorreoOpen}
+        message="Enviando solicitud…"
       />
+      <LoadingModal
+        open={prefillLoading}
+        message="Cargando datos del documento…"
+      />
+
+        <ModalConfirmarCorreoAprobadores
+          open={modalCorreoOpen}
+          onClose={() => setModalCorreoOpen(false)}
+          onConfirm={async () => {
+            const ok = await handleSubmit();
+            if (ok) setModalCorreoOpen(false);
+          }}
+          previewParams={previewCorreoParams}
+          confirming={loading}
+          confirmingMessage="Enviando solicitud…"
+        />
     </Paper>
   );
 }
 
 function CrearSolicitud() {
   const [opcion, setOpcion] = useState(null);
+
+  useEffect(() => {
+    if (tienePrefillSolicitudCambio()) {
+      setOpcion("cambio");
+    }
+  }, []);
 
   return (
     <HexagonMenu selectedItemId="crear-solicitud">
@@ -837,7 +961,7 @@ function CrearSolicitud() {
               Elija el tipo de trámite que desea iniciar.
             </Typography>
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Card
                   sx={{
                     height: "100%",
@@ -887,7 +1011,7 @@ function CrearSolicitud() {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Card
                   sx={{
                     height: "100%",

@@ -88,6 +88,26 @@ const theme = createTheme({
         },
       },
     },
+    MuiTextField: {
+      defaultProps: {
+        autoComplete: "off",
+        slotProps: {
+          htmlInput: {
+            autoComplete: "off",
+          },
+        },
+      },
+    },
+    MuiOutlinedInput: {
+      defaultProps: {
+        autoComplete: "off",
+      },
+    },
+    MuiSelect: {
+      defaultProps: {
+        autoComplete: "off",
+      },
+    },
   },
 });
 

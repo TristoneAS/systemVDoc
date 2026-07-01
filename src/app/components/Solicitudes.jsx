@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Box,
   Paper,
@@ -26,6 +26,7 @@ import {
   Divider,
   FormControlLabel,
   Switch,
+  InputAdornment,
 } from "@mui/material";
 import {
   Archive,
@@ -35,6 +36,7 @@ import {
   Edit,
   InsertDriveFile,
   Visibility,
+  Search,
 } from "@mui/icons-material";
 import HexagonMenu from "./HexagonMenu";
 import EditarSolicitudRechazadaDialog from "./EditarSolicitudRechazadaDialog";
@@ -42,6 +44,10 @@ import {
   esEstadoObsoletaValor,
   filtrarSolicitudesPorObsoletas,
 } from "@/libs/solicitudes_estado";
+import {
+  formatFechaRetencion,
+  tieneValorRetencion,
+} from "@/libs/tiempo_retencion";
 
 function formatFecha(v) {
   if (!v) return "—";
@@ -470,6 +476,15 @@ function Solicitudes({ misSolicitudes = false }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminAusenciaLoadingId, setAdminAusenciaLoadingId] = useState(null);
   const [mostrarObsoletas, setMostrarObsoletas] = useState(false);
+  const [busquedaSolicitud, setBusquedaSolicitud] = useState("");
+
+  const rowsFiltradas = useMemo(() => {
+    const term = String(busquedaSolicitud ?? "").trim().replace(/^#/, "");
+    if (!term) return rows;
+    return rows.filter((r) => String(r.id_solicitud ?? "").includes(term));
+  }, [rows, busquedaSolicitud]);
+
+  const hayFiltroSolicitud = Boolean(String(busquedaSolicitud ?? "").trim());
 
   const aplicarFilasListado = (data, mostrarObs) =>
     filtrarSolicitudesPorObsoletas(data.data || [], mostrarObs);
@@ -864,6 +879,55 @@ function Solicitudes({ misSolicitudes = false }) {
           sx={{ mb: 2, ml: 0 }}
         />
 
+        <Box
+          sx={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 1.5,
+            alignItems: "center",
+            mb: 2,
+          }}
+        >
+          <TextField
+            size="small"
+            label="Buscar solicitud"
+            placeholder="Número de solicitud, ej. 1 o #12"
+            value={busquedaSolicitud}
+            onChange={(e) => setBusquedaSolicitud(e.target.value)}
+            sx={{
+              flex: "1 1 220px",
+              minWidth: 200,
+              maxWidth: 360,
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: "#ffffff",
+                fontSize: "0.875rem",
+              },
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search sx={{ color: "#9E9E9E", fontSize: 20 }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+          {hayFiltroSolicitud && (
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setBusquedaSolicitud("")}
+              sx={{
+                textTransform: "none",
+                fontWeight: 600,
+                color: "#1976D2",
+                borderColor: "rgba(25, 118, 210, 0.5)",
+              }}
+            >
+              Limpiar
+            </Button>
+          )}
+        </Box>
+
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
@@ -906,19 +970,21 @@ function Solicitudes({ misSolicitudes = false }) {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {rows.length === 0 ? (
+                {rowsFiltradas.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={8}
                       sx={{ color: "#757575", border: 0 }}
                     >
-                      {misSolicitudes
-                        ? "No tiene solicitudes registradas a su nombre."
-                        : "No hay solicitudes registradas."}
+                      {hayFiltroSolicitud
+                        ? "No hay solicitudes que coincidan con la búsqueda."
+                        : misSolicitudes
+                          ? "No tiene solicitudes registradas a su nombre."
+                          : "No hay solicitudes registradas."}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  rows.map((r) => {
+                  rowsFiltradas.map((r) => {
                     const puedeAprobar = r.puede_aprobar === true;
                     const puedeRechazar = r.puede_rechazar === true;
                     return (
@@ -1332,7 +1398,9 @@ function Solicitudes({ misSolicitudes = false }) {
                   archivos_json={dialogAprobacionesSolicitud.archivos_json}
                 />
               </Box>
-              {(dialogAprobacionesSolicitud.tiempo_retencion?.trim() ||
+              {(tieneValorRetencion(
+                dialogAprobacionesSolicitud.tiempo_retencion,
+              ) ||
                 dialogAprobacionesSolicitud.ubicacion_registro?.trim()) && (
                 <Box>
                   <Typography
@@ -1341,10 +1409,14 @@ function Solicitudes({ misSolicitudes = false }) {
                   >
                     Retención y registro
                   </Typography>
-                  {dialogAprobacionesSolicitud.tiempo_retencion?.trim() ? (
+                  {tieneValorRetencion(
+                    dialogAprobacionesSolicitud.tiempo_retencion,
+                  ) ? (
                     <Typography variant="body2" sx={{ color: "#212121" }}>
-                      Tiempo de retención:{" "}
-                      {dialogAprobacionesSolicitud.tiempo_retencion}
+                      Fecha de retención:{" "}
+                      {formatFechaRetencion(
+                        dialogAprobacionesSolicitud.tiempo_retencion,
+                      )}
                     </Typography>
                   ) : null}
                   {dialogAprobacionesSolicitud.ubicacion_registro?.trim() ? (

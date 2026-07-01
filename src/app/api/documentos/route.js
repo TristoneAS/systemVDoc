@@ -3,11 +3,26 @@ import { conn } from "@/libs/system_v_docs";
 import { getNextIdDocumento } from "@/libs/next_id_documento";
 import { resolveIdAreaRequerido } from "@/libs/id_area";
 import { optionalVarchar200 } from "@/libs/optional_varchar200";
+import { parseOptionalFechaRetencion } from "@/libs/tiempo_retencion";
+import {
+  existeNomenclaturaDocumento,
+  ERROR_NOMENCLATURA_YA_REGISTRADA,
+  normalizarNomenclatura,
+} from "@/libs/nomenclatura_documento";
+import {
+  validarArchivosAdjuntos,
+  asignarNombresArchivosDocumento,
+} from "@/libs/archivos_adjuntos";
 import { obtenerDocumentoConArchivos } from "@/libs/documento_detalle";
 import {
   cargarMapaAreas,
   enriquecerDocumentosConArea,
 } from "@/libs/documentos_area";
+import {
+  ACCION_HISTORIAL,
+  registrarHistorial,
+  resumenArchivosHistorial,
+} from "@/libs/historial_archivos";
 import fs from "fs";
 import path from "path";
 
@@ -41,8 +56,8 @@ export async function GET(request) {
           { status: 400 },
         );
       }
-      const whereParts = ["d.nomenclatura LIKE ?"];
-      const queryParams = [`%${term}%`];
+      const whereParts = ["d.nomenclatura = ?"];
+      const queryParams = [term];
       if (filtroEstadoValido) {
         whereParts.push("d.estado = ?");
         queryParams.push(estadoFiltro);
@@ -117,16 +132,33 @@ export async function POST(request) {
     const formData = await request.formData();
 
     const fecha_alta = formData.get("fecha_alta");
-    const nomenclatura = formData.get("nomenclatura");
+    const nomenclatura = normalizarNomenclatura(formData.get("nomenclatura"));
     const nombre_documento = formData.get("nombre_documento");
     const id_area_raw = formData.get("id_area");
-    const tiempo_retencion = optionalVarchar200(
+    const tiempoRetencionRes = parseOptionalFechaRetencion(
       formData.get("tiempo_retencion"),
     );
+    if (tiempoRetencionRes.error) {
+      return NextResponse.json(
+        { error: tiempoRetencionRes.error },
+        { status: 400 },
+      );
+    }
+    const tiempo_retencion = tiempoRetencionRes.value;
     const ubicacion_registro = optionalVarchar200(
       formData.get("ubicacion_registro"),
     );
-    const archivos = formData.getAll("archivos");
+    const archivos = formData
+      .getAll("archivos")
+      .filter((a) => a instanceof File && a.size > 0);
+
+    const validacionArchivos = validarArchivosAdjuntos(archivos);
+    if (!validacionArchivos.ok) {
+      return NextResponse.json(
+        { error: validacionArchivos.error },
+        { status: 400 },
+      );
+    }
 
     if (!fecha_alta || !nomenclatura || !nombre_documento) {
       return NextResponse.json(
@@ -141,6 +173,13 @@ export async function POST(request) {
     }
     const { id_area } = areaRes;
 
+    if (await existeNomenclaturaDocumento(conn, nomenclatura)) {
+      return NextResponse.json(
+        { error: ERROR_NOMENCLATURA_YA_REGISTRADA },
+        { status: 409 },
+      );
+    }
+
     const id_documento = await getNextIdDocumento();
 
     // Crear carpeta única para este documento
@@ -149,24 +188,30 @@ export async function POST(request) {
 
     // Guardar archivos y obtener sus rutas
     const archivosGuardados = [];
+    const archivosValidos = archivos.filter(
+      (archivo) => archivo instanceof File && archivo.size > 0,
+    );
+    const nombresArchivo = asignarNombresArchivosDocumento(archivosValidos, {
+      nomenclatura,
+      nombreDocumento: nombre_documento,
+    });
 
-    for (const archivo of archivos) {
-      if (archivo instanceof File && archivo.size > 0) {
-        const nombreArchivo = archivo.name;
-        const buffer = Buffer.from(await archivo.arrayBuffer());
-        const rutaArchivo = path.join(carpetaDocumento, nombreArchivo);
+    for (let i = 0; i < archivosValidos.length; i++) {
+      const archivo = archivosValidos[i];
+      const nombreArchivo = nombresArchivo[i];
+      const buffer = Buffer.from(await archivo.arrayBuffer());
+      const rutaArchivo = path.join(carpetaDocumento, nombreArchivo);
 
-        // Guardar archivo en el sistema de archivos
-        fs.writeFileSync(rutaArchivo, buffer);
+      // Guardar archivo en el sistema de archivos
+      fs.writeFileSync(rutaArchivo, buffer);
 
-        // Guardar información del archivo
-        archivosGuardados.push({
-          nombre_archivo: nombreArchivo,
-          ruta_archivo: `/uploads/documentos/${id_documento}/${nombreArchivo}`,
-          tipo_archivo: archivo.type || path.extname(nombreArchivo),
-          tamano_archivo: archivo.size,
-        });
-      }
+      // Guardar información del archivo
+      archivosGuardados.push({
+        nombre_archivo: nombreArchivo,
+        ruta_archivo: `/uploads/documentos/${id_documento}/${nombreArchivo}`,
+        tipo_archivo: archivo.type || path.extname(nombreArchivo),
+        tamano_archivo: archivo.size,
+      });
     }
 
     // Guardar documento en la base de datos
@@ -207,6 +252,29 @@ export async function POST(request) {
         [valoresArchivos],
       );
     }
+
+    const empIdActor =
+      String(formData.get("emp_id_actor") || formData.get("emp_id_solicitante") || "").trim() ||
+      null;
+    const empNombreActor =
+      String(formData.get("emp_nombre_actor") || formData.get("solicitante") || "").trim() ||
+      null;
+
+    await registrarHistorial(conn, {
+      id_documento,
+      accion: ACCION_HISTORIAL.ALTA_DIRECTA,
+      emp_id_actor: empIdActor,
+      emp_nombre_actor: empNombreActor,
+      detalle: `Alta directa: ${nombre_documento}`,
+      datos_nuevos: {
+        nomenclatura,
+        nombre_documento,
+        id_area,
+        tiempo_retencion,
+        ubicacion_registro,
+        archivos: resumenArchivosHistorial(archivosGuardados),
+      },
+    });
 
     return NextResponse.json({
       success: true,

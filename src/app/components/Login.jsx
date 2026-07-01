@@ -368,6 +368,7 @@ function Login() {
               fullWidth
               label="Usuario"
               name="user"
+              autoComplete="username"
               value={user.user}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
@@ -402,12 +403,18 @@ function Login() {
                   </InputAdornment>
                 ),
               }}
+              slotProps={{
+                htmlInput: {
+                  autoComplete: "username",
+                },
+              }}
             />
 
             <TextField
               fullWidth
               label="Contraseña"
               name="password"
+              autoComplete="current-password"
               value={user.password}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
@@ -455,6 +462,11 @@ function Login() {
                   </InputAdornment>
                 ),
               }}
+              slotProps={{
+                htmlInput: {
+                  autoComplete: "current-password",
+                },
+              }}
             />
 
             <Button
@@ -488,7 +500,7 @@ function Login() {
                   Iniciando Sesión...
                 </Box>
               ) : (
-                "Acceder al gestor de documentos"
+                "Iniciar Sesion"
               )}
             </Button>
           </Box>

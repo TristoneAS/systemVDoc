@@ -15,7 +15,6 @@ import {
   Card,
   CardContent,
   IconButton,
-  CircularProgress,
   FormControl,
   InputLabel,
   Select,
@@ -33,13 +32,28 @@ import {
 } from "@mui/icons-material";
 import HexagonMenu from "./HexagonMenu";
 import ModalConfirmarCorreoAprobadores from "./ModalConfirmarCorreoAprobadores";
+import LoadingModal from "./LoadingModal";
 import { getSolicitanteParaSolicitud } from "./Solicitudes";
 import FormSection, {
   textFieldSx,
   disabledFieldSx,
   sectionTitleSx,
   stepperSx,
+  splitRowSx,
+  splitCol35Sx,
+  splitCol65Sx,
 } from "./FormSection";
+import CampoFechaRetencion from "./CampoFechaRetencion";
+import { useVerificarNomenclaturaDocumento } from "@/app/hooks/useVerificarNomenclaturaDocumento";
+import { ERROR_NOMENCLATURA_YA_REGISTRADA } from "@/libs/nomenclatura_documento";
+import {
+  ACCEPT_ARCHIVOS_ADJUNTOS,
+  ARCHIVOS_ADJUNTOS_HINT,
+  MAX_ARCHIVOS_ADJUNTOS,
+  combinarArchivosAlSubir,
+  validarArchivosAdjuntos,
+  renombrarArchivosDocumento,
+} from "@/libs/archivos_adjuntos";
 
 const steps = ["Información Básica", "Cargar Archivos"];
 
@@ -72,6 +86,9 @@ function NuevoDocumento({
   const [previewCorreoParams, setPreviewCorreoParams] = useState(null);
   const [areas, setAreas] = useState([]);
   const [areasLoading, setAreasLoading] = useState(true);
+
+  const { verificando: nomenclaturaVerificando, yaRegistrada: nomenclaturaYaRegistrada } =
+    useVerificarNomenclaturaDocumento(formData.nomenclatura);
 
   useEffect(() => {
     const cargarVistaPreliaId = async () => {
@@ -134,6 +151,10 @@ function NuevoDocumento({
     const newErrors = {};
     if (!formData.nomenclatura.trim()) {
       newErrors.nomenclatura = "La nomenclatura es requerida";
+    } else if (nomenclaturaYaRegistrada) {
+      newErrors.nomenclatura = ERROR_NOMENCLATURA_YA_REGISTRADA;
+    } else if (nomenclaturaVerificando) {
+      newErrors.nomenclatura = "Verificando nomenclatura…";
     }
     if (!formData.confirmar_nomenclatura.trim()) {
       newErrors.confirmar_nomenclatura = "Debe confirmar la nomenclatura";
@@ -160,11 +181,12 @@ function NuevoDocumento({
   };
 
   const validateStep2 = () => {
-    // Validar que haya al menos un archivo
-    if (formData.archivos.length === 0) {
-      setSubmitError("Debe cargar al menos un archivo");
+    const validacion = validarArchivosAdjuntos(formData.archivos);
+    if (!validacion.ok) {
+      setSubmitError(validacion.error);
       return false;
     }
+    setSubmitError("");
     return true;
   };
 
@@ -179,39 +201,31 @@ function NuevoDocumento({
     setActiveStep((prevActiveStep) => prevActiveStep - 1);
   };
 
+  const ctxRenombreArchivos = () => ({
+    nomenclatura: formData.nomenclatura,
+    nombreDocumento: formData.nombre_documento,
+  });
+
   const handleFileUpload = (event) => {
     const files = Array.from(event.target.files);
-    const allowedTypes = [
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
-      "application/vnd.ms-excel", // .xls
-      "application/pdf", // .pdf
-      "application/msword", // .doc
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
-      "application/vnd.ms-powerpoint", // .ppt
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx
-    ];
-
-    const validFiles = files.filter((file) => {
-      if (!allowedTypes.includes(file.type)) {
-        alert(
-          `El archivo ${file.name} no es un formato válido. Solo se permiten Excel, PDF, Word y PowerPoint.`,
-        );
-        return false;
-      }
-      return true;
-    });
-
-    setFormData((prev) => ({
-      ...prev,
-      archivos: [...prev.archivos, ...validFiles],
-    }));
+    event.target.value = "";
+    const { archivos, mensajes } = combinarArchivosAlSubir(
+      formData.archivos,
+      files,
+      ctxRenombreArchivos(),
+    );
+    mensajes.forEach((m) => alert(m));
+    setFormData((prev) => ({ ...prev, archivos }));
   };
 
   const handleRemoveFile = (index) => {
-    setFormData((prev) => ({
-      ...prev,
-      archivos: prev.archivos.filter((_, i) => i !== index),
-    }));
+    setFormData((prev) => {
+      const archivos = prev.archivos.filter((_, i) => i !== index);
+      return {
+        ...prev,
+        archivos: renombrarArchivosDocumento(archivos, ctxRenombreArchivos()),
+      };
+    });
   };
 
   const getFileIcon = (file) => {
@@ -261,10 +275,10 @@ function NuevoDocumento({
     if (!validateStep1()) {
       setSubmitError("Complete o corrija la información básica");
       setActiveStep(0);
-      return;
+      return false;
     }
     if (!validateStep2()) {
-      return;
+      return false;
     }
 
     setLoading(true);
@@ -279,9 +293,11 @@ function NuevoDocumento({
       formDataToSend.append("tiempo_retencion", formData.tiempo_retencion);
       formDataToSend.append("ubicacion_registro", formData.ubicacion_registro);
 
-      formData.archivos.forEach((archivo) => {
-        formDataToSend.append("archivos", archivo);
-      });
+      renombrarArchivosDocumento(formData.archivos, ctxRenombreArchivos()).forEach(
+        (archivo) => {
+          formDataToSend.append("archivos", archivo);
+        },
+      );
 
       if (saveAsSolicitud) {
         formDataToSend.append("tipo", "nuevo");
@@ -292,7 +308,7 @@ function NuevoDocumento({
             "No se encontró emp_id o emp_nombre en la sesión (infoUser). Vuelva a iniciar sesión.",
           );
           setLoading(false);
-          return;
+          return false;
         }
         formDataToSend.append("emp_id_solicitante", emp_id_solicitante);
         formDataToSend.append("solicitante", solicitante);
@@ -323,7 +339,7 @@ function NuevoDocumento({
               ? "Error al enviar la solicitud"
               : "Error al guardar el documento"),
         );
-        return;
+        return false;
       }
 
       setSubmitSuccess(true);
@@ -351,9 +367,11 @@ function NuevoDocumento({
         setActiveStep(0);
         setSubmitSuccess(false);
       }, 2000);
+      return true;
     } catch (error) {
       console.error("Error al guardar documento:", error);
       setSubmitError("Error de conexión. Intente nuevamente.");
+      return false;
     } finally {
       setLoading(false);
     }
@@ -406,13 +424,23 @@ function NuevoDocumento({
                     onChange={(e) =>
                       handleInputChange("nomenclatura", e.target.value)
                     }
-                    error={!!errors.nomenclatura}
-                    helperText={errors.nomenclatura}
+                    error={!!errors.nomenclatura || nomenclaturaYaRegistrada}
+                    helperText={
+                      errors.nomenclatura ||
+                      (nomenclaturaVerificando
+                        ? "Verificando nomenclatura…"
+                        : nomenclaturaYaRegistrada
+                          ? ERROR_NOMENCLATURA_YA_REGISTRADA
+                          : undefined)
+                    }
                     required
                     sx={{
                       ...textFieldSx,
                       "& .MuiFormHelperText-root": {
-                        color: errors.nomenclatura ? "#b91c1c" : "#757575",
+                        color:
+                          errors.nomenclatura || nomenclaturaYaRegistrada
+                            ? "#b91c1c"
+                            : "#757575",
                       },
                     }}
                   />
@@ -448,8 +476,8 @@ function NuevoDocumento({
               title="Datos del documento"
               subtitle="Información principal del registro."
             >
-              <Grid container spacing={2.5}>
-                <Grid item xs={12}>
+              <Box sx={splitRowSx}>
+                <Box sx={splitCol35Sx}>
                   <FormControl
                     fullWidth
                     required
@@ -490,8 +518,8 @@ function NuevoDocumento({
                       <FormHelperText>Cargando áreas…</FormHelperText>
                     ) : null}
                   </FormControl>
-                </Grid>
-                <Grid item xs={12}>
+                </Box>
+                <Box sx={splitCol65Sx}>
                   <TextField
                     fullWidth
                     label="Nombre del documento"
@@ -509,28 +537,23 @@ function NuevoDocumento({
                       },
                     }}
                   />
-                </Grid>
-              </Grid>
+                </Box>
+              </Box>
             </FormSection>
 
             <FormSection
               title="Información adicional"
               subtitle="Campos opcionales de retención y ubicación."
             >
-              <Grid container spacing={2.5}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Tiempo de retención"
+              <Box sx={splitRowSx}>
+                <Box sx={splitCol35Sx}>
+                  <CampoFechaRetencion
                     value={formData.tiempo_retencion}
-                    onChange={(e) =>
-                      handleInputChange("tiempo_retencion", e.target.value)
-                    }
-                    placeholder="Ej. 5 años"
-                    sx={textFieldSx}
+                    onChange={(v) => handleInputChange("tiempo_retencion", v)}
+                    textFieldSx={textFieldSx}
                   />
-                </Grid>
-                <Grid item xs={12} sm={6}>
+                </Box>
+                <Box sx={splitCol65Sx}>
                   <TextField
                     fullWidth
                     label="Ubicación del registro"
@@ -541,8 +564,8 @@ function NuevoDocumento({
                     placeholder="Ej. Servidor / carpeta"
                     sx={textFieldSx}
                   />
-                </Grid>
-              </Grid>
+                </Box>
+              </Box>
             </FormSection>
           </Box>
         );
@@ -552,7 +575,7 @@ function NuevoDocumento({
           <Box>
             <FormSection
               title="Archivos del documento"
-              subtitle="Adjunte al menos un archivo en los formatos permitidos."
+              subtitle={ARCHIVOS_ADJUNTOS_HINT}
             >
             <Box
               sx={{
@@ -572,18 +595,20 @@ function NuevoDocumento({
               }}
             >
               <input
-                accept=".xlsx,.xls,.pdf,.doc,.docx,.ppt,.pptx"
+                accept={ACCEPT_ARCHIVOS_ADJUNTOS}
                 style={{ display: "none" }}
                 id="file-upload"
                 multiple
                 type="file"
                 onChange={handleFileUpload}
+                disabled={formData.archivos.length >= MAX_ARCHIVOS_ADJUNTOS}
               />
               <label htmlFor="file-upload">
                 <Button
                   variant="contained"
                   component="span"
                   startIcon={<CloudUpload />}
+                  disabled={formData.archivos.length >= MAX_ARCHIVOS_ADJUNTOS}
                   sx={{
                     backgroundColor: "#FFFFFF",
                     color: "#212121",
@@ -603,7 +628,7 @@ function NuevoDocumento({
                 </Button>
               </label>
               <Typography variant="caption" sx={{ color: "#757575", mt: 2 }}>
-                Excel, PDF, Word y PowerPoint
+                {ARCHIVOS_ADJUNTOS_HINT}
               </Typography>
             </Box>
             </FormSection>
@@ -611,7 +636,7 @@ function NuevoDocumento({
             {formData.archivos.length > 0 && (
               <Box sx={{ mt: 1 }}>
                 <Typography sx={{ ...sectionTitleSx, mb: 1.5 }}>
-                  Archivos cargados ({formData.archivos.length})
+                  Archivos cargados ({formData.archivos.length}/{MAX_ARCHIVOS_ADJUNTOS})
                 </Typography>
                 <Grid container spacing={2}>
                   {formData.archivos.map((file, index) => (
@@ -782,35 +807,37 @@ function NuevoDocumento({
         </Alert>
       )}
 
-      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-        <Button
-          disabled={activeStep === 0 || loading}
-          onClick={handleBack}
-          sx={{
-            color: "#1976D2",
-            "&:disabled": {
-              color: "rgba(117, 117, 117, 0.55)",
-            },
-          }}
-        >
-          Atrás
-        </Button>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: activeStep > 0 ? "space-between" : "flex-end",
+        }}
+      >
+        {activeStep > 0 && (
+          <Button
+            disabled={loading}
+            onClick={handleBack}
+            sx={{ color: "#1976D2" }}
+          >
+            Atrás
+          </Button>
+        )}
         {activeStep === steps.length - 1 ? (
           <Button
             variant="contained"
             onClick={saveAsSolicitud ? handleAbrirConfirmacionCorreo : handleSubmit}
             disabled={loading}
             sx={{
-              backgroundColor: loading ? "#E0E0E0" : "#E3F2FD",
+              backgroundColor: "#E3F2FD",
               color: "#1976D2",
-              border: loading ? "1px solid #9E9E9E" : "1px solid #1976D2",
+              border: "1px solid #1976D2",
               px: 4,
               py: 1,
               borderRadius: 2,
               fontWeight: 600,
               textTransform: "none",
               "&:hover": {
-                backgroundColor: loading ? "#E0E0E0" : "#BBDEFB",
+                backgroundColor: "#BBDEFB",
                 color: "#1976D2",
               },
               "&:disabled": {
@@ -820,14 +847,7 @@ function NuevoDocumento({
               },
             }}
           >
-            {loading ? (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <CircularProgress size={20} sx={{ color: "#1976D2" }} />
-                {savingLabel}
-              </Box>
-            ) : (
-              submitButtonText
-            )}
+            {submitButtonText}
           </Button>
         ) : (
           <Button
@@ -853,16 +873,19 @@ function NuevoDocumento({
         )}
       </Box>
 
+      <LoadingModal open={loading && !(saveAsSolicitud && modalCorreoOpen)} message={savingLabel} />
+
       {saveAsSolicitud && (
         <ModalConfirmarCorreoAprobadores
           open={modalCorreoOpen}
           onClose={() => setModalCorreoOpen(false)}
           onConfirm={async () => {
-            setModalCorreoOpen(false);
-            await handleSubmit();
+            const ok = await handleSubmit();
+            if (ok) setModalCorreoOpen(false);
           }}
           previewParams={previewCorreoParams}
           confirming={loading}
+          confirmingMessage={savingLabel}
         />
       )}
     </Paper>

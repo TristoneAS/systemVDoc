@@ -5,6 +5,7 @@ import {
   labelTiposAprobador,
 } from "@/libs/aprobaciones";
 import { isValidEmail, sendMailMessage } from "@/libs/mailer";
+import { formatFechaRetencion } from "@/libs/tiempo_retencion";
 
 const BRAND_ORANGE = "#e67e22";
 const BRAND_ORANGE_DARK = "#d35400";
@@ -114,8 +115,8 @@ function buildHtmlCorreoAprobacion({
       false,
     ),
     filaDetalleDoble(
-      "Tiempo retención",
-      escapeHtml(solicitud.tiempo_retencion?.trim() || "—"),
+      "Fecha de retención",
+      escapeHtml(formatFechaRetencion(solicitud.tiempo_retencion)),
       "Ubicación",
       escapeHtml(solicitud.ubicacion_registro?.trim() || "—"),
       true,
@@ -215,7 +216,7 @@ function buildTextoPlano({
     `- Nomenclatura: ${solicitud.nomenclatura || "—"}`,
     `- Nombre del registro: ${solicitud.nombre_documento || "—"}`,
     `- Dueño del registro (área): ${solicitud.area_nombre || "—"}`,
-    `- Tiempo de retención: ${solicitud.tiempo_retencion?.trim() || "—"}`,
+    `- Fecha de retención: ${formatFechaRetencion(solicitud.tiempo_retencion)}`,
     `- Ubicación del registro: ${solicitud.ubicacion_registro?.trim() || "—"}`,
     `- Motivo: ${solicitud.motivo || "—"}`,
     `- Creado por: ${solicitud.solicitante || "—"}`,

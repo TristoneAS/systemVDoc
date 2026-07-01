@@ -25,11 +25,11 @@ import {
   ExpandMore,
   Add,
   Visibility,
-  TableChart,
   Create,
   List as ListIcon,
   Person,
   Logout,
+  EventBusy,
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 import {
@@ -64,15 +64,16 @@ function buildMenuItems(isAdmin) {
         },
         {
           id: "visualizar-documentos",
-          title: "Visualizar Documentos",
+          title: "Lista maestra",
+          subtitle: "Matriz de registros",
           icon: Visibility,
           route: "/dashboard/documentos",
         },
         {
-          id: "matriz-registros",
-          title: "Matriz de registros",
-          icon: TableChart,
-          route: "/dashboard/matriz-registros",
+          id: "documentos-por-vencer",
+          title: "Documentos por vencer",
+          icon: EventBusy,
+          route: "/dashboard/documentos-por-vencer",
         },
       ],
     },
@@ -159,7 +160,7 @@ function HexagonMenu({ selectedItemId, children }) {
     if (
       selectedItemId === "nuevo-documento" ||
       selectedItemId === "visualizar-documentos" ||
-      selectedItemId === "matriz-registros"
+      selectedItemId === "documentos-por-vencer"
     ) {
       setExpandedItems((prev) => ({ ...prev, documentos: true }));
     }
@@ -384,7 +385,8 @@ function HexagonMenu({ selectedItemId, children }) {
                               onClick={() => handleSubmenuClick(subItem)}
                               sx={{
                                 borderRadius: 2,
-                                py: 0.875,
+                                py: subItem.subtitle ? 1 : 0.875,
+                                alignItems: "flex-start",
                                 backgroundColor: isSubSelected
                                   ? "#1976D2"
                                   : "transparent",
@@ -400,6 +402,7 @@ function HexagonMenu({ selectedItemId, children }) {
                               <ListItemIcon
                                 sx={{
                                   minWidth: 32,
+                                  mt: subItem.subtitle ? 0.25 : 0,
                                   color: isSubSelected ? "#ffffff" : "#616161",
                                 }}
                               >
@@ -407,11 +410,25 @@ function HexagonMenu({ selectedItemId, children }) {
                               </ListItemIcon>
                               <ListItemText
                                 primary={subItem.title}
+                                secondary={subItem.subtitle}
                                 primaryTypographyProps={{
                                   sx: {
                                     fontWeight: isSubSelected ? 600 : 500,
                                     color: isSubSelected ? "#ffffff" : "#212121",
                                     fontSize: "0.875rem",
+                                    lineHeight: 1.35,
+                                    whiteSpace: "normal",
+                                  },
+                                }}
+                                secondaryTypographyProps={{
+                                  sx: {
+                                    fontSize: "0.75rem",
+                                    lineHeight: 1.3,
+                                    whiteSpace: "normal",
+                                    color: isSubSelected
+                                      ? "rgba(255,255,255,0.85)"
+                                      : "#757575",
+                                    mt: subItem.subtitle ? 0.25 : 0,
                                   },
                                 }}
                               />

@@ -1,8 +1,5 @@
-import React from "react";
-import MatrizRegistros from "../../components/MatrizRegistros";
+import { redirect } from "next/navigation";
 
-function page() {
-  return <MatrizRegistros />;
+export default function MatrizRegistrosPage() {
+  redirect("/dashboard/documentos");
 }
-
-export default page;

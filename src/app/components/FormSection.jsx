@@ -46,6 +46,17 @@ export const sectionTitleSx = {
   mb: 2,
 };
 
+/** Fila 35 % / 65 % (misma línea en sm+). */
+export const splitRowSx = {
+  display: "flex",
+  flexDirection: { xs: "column", sm: "row" },
+  gap: 2.5,
+  width: "100%",
+};
+
+export const splitCol35Sx = { width: { xs: "100%", sm: "35%" }, minWidth: 0 };
+export const splitCol65Sx = { width: { xs: "100%", sm: "65%" }, minWidth: 0 };
+
 export const stepperSx = {
   mb: 4,
   "& .MuiStepLabel-root .Mui-completed": { color: "#1976D2" },

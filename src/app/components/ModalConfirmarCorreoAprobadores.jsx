@@ -9,15 +9,16 @@ import {
   Button,
   Typography,
   Alert,
-  CircularProgress,
   List,
   ListItem,
   ListItemText,
   Chip,
   Box,
   Divider,
+  CircularProgress,
 } from "@mui/material";
 import { Email, WarningAmber } from "@mui/icons-material";
+import LoadingModal from "./LoadingModal";
 
 function ListaAprobadoresCorreo({ titulo, subtitulo, items, chipLabel, chipColor }) {
   if (!items?.length) return null;
@@ -108,6 +109,7 @@ export default function ModalConfirmarCorreoAprobadores({
   onConfirm,
   previewParams,
   confirming = false,
+  confirmingMessage = "Enviando solicitud…",
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -193,12 +195,6 @@ export default function ModalConfirmarCorreoAprobadores({
           recibirán correo cuando el jefe directo haya aprobado.
         </Alert>
 
-        {loading && (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
-            <CircularProgress sx={{ color: "#1976D2" }} />
-          </Box>
-        )}
-
         {error && (
           <Alert severity="error" sx={{ mb: 1 }}>
             {error}
@@ -250,16 +246,26 @@ export default function ModalConfirmarCorreoAprobadores({
             color: "#1976D2",
             border: "1px solid #1976D2",
             textTransform: "none",
+            minWidth: 160,
             "&:hover": { bgcolor: "#BBDEFB" },
           }}
         >
           {confirming ? (
-            <CircularProgress size={22} sx={{ color: "#1976D2" }} />
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <CircularProgress size={18} sx={{ color: "#1976D2" }} />
+              Enviando…
+            </Box>
           ) : (
             "Enviar solicitud"
           )}
         </Button>
       </DialogActions>
+
+      <LoadingModal
+        open={loading}
+        message="Consultando aprobadores…"
+      />
+      <LoadingModal open={confirming} message={confirmingMessage} />
     </Dialog>
   );
 }
