@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import Image from "next/image";
 import {
   Box,
   Typography,
@@ -279,22 +280,54 @@ function HexagonMenu({ selectedItemId, children }) {
         anchor="left"
       >
         <Toolbar
+          component="div"
+          role="button"
+          tabIndex={0}
+          onClick={() => router.push("/dashboard")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              router.push("/dashboard");
+            }
+          }}
           sx={{
             backgroundColor: "#FFFFFF",
             borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
             minHeight: { xs: 56, sm: 60 },
+            px: 2,
+            py: 1,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            cursor: "pointer",
+            "&:hover": {
+              backgroundColor: "rgba(25, 118, 210, 0.04)",
+            },
           }}
         >
-          <Typography
-            variant="h6"
+          <Box
             sx={{
-              fontWeight: 700,
-              color: "#1976D2",
-              fontSize: "1.15rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "100%",
+              maxWidth: 128,
             }}
           >
-            Menú
-          </Typography>
+            <Image
+              src="/tristone_logo_head.png"
+              alt="Tristone"
+              width={120}
+              height={46}
+              priority
+              style={{
+                objectFit: "contain",
+                width: "100%",
+                height: "auto",
+                maxHeight: 38,
+              }}
+            />
+          </Box>
         </Toolbar>
         <Divider sx={{ borderColor: "rgba(0, 0, 0, 0.08)" }} />
         <List sx={{ pt: 2, flex: 1, overflow: "auto" }}>
