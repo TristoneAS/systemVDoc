@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Box,
   Paper,
@@ -48,7 +48,10 @@ import {
   formatFechaRetencion,
   tieneValorRetencion,
 } from "@/libs/tiempo_retencion";
-import { codificarRutaPublicaArchivo } from "@/libs/archivos_adjuntos";
+import {
+  obtenerBlobArchivoPorRutas,
+  rutasCandidatasArchivoSolicitud,
+} from "@/libs/archivos_adjuntos";
 
 function formatFecha(v) {
   if (!v) return "—";
@@ -90,32 +93,81 @@ function esArchivoPdf(archivo) {
   return nombre.endsWith(".pdf");
 }
 
-function descargarArchivoSolicitud(rutaArchivo, nombreArchivo) {
+async function descargarArchivoSolicitud(rutaArchivo, nombreArchivo, solicitud) {
+  const resultado = await obtenerBlobArchivoPorRutas(
+    rutasCandidatasArchivoSolicitud(
+      { ruta_archivo: rutaArchivo, nombre_archivo: nombreArchivo },
+      solicitud,
+    ),
+  );
+  if (!resultado) return;
+
+  const blobUrl = URL.createObjectURL(resultado.blob);
   const link = document.createElement("a");
-  link.href = codificarRutaPublicaArchivo(rutaArchivo);
+  link.href = blobUrl;
   link.download = nombreArchivo || "archivo";
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  URL.revokeObjectURL(blobUrl);
 }
 
 /** Lista de archivos de una solicitud (modal o reutilizable). */
-function ListaArchivosSolicitud({ archivos_json }) {
+function ListaArchivosSolicitud({ archivos_json, solicitud = null }) {
   const [archivoPdfVisualizar, setArchivoPdfVisualizar] = useState(null);
   const [errorVisorPdf, setErrorVisorPdf] = useState("");
+  const [cargandoPdf, setCargandoPdf] = useState(false);
+  const blobUrlRef = useRef(null);
   const archivos = parseArchivos(archivos_json);
 
-  const abrirVisorPdf = (archivo) => {
+  useEffect(() => {
+    return () => {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+    };
+  }, []);
+
+  const abrirVisorPdf = async (archivo) => {
     setErrorVisorPdf("");
+    setCargandoPdf(true);
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
+    setArchivoPdfVisualizar(null);
+
+    const resultado = await obtenerBlobArchivoPorRutas(
+      rutasCandidatasArchivoSolicitud(archivo, solicitud),
+    );
+
+    if (!resultado) {
+      setErrorVisorPdf(
+        "No se pudo cargar el PDF. Verifique que el archivo exista en el servidor.",
+      );
+      setCargandoPdf(false);
+      return;
+    }
+
+    const blobUrl = URL.createObjectURL(resultado.blob);
+    blobUrlRef.current = blobUrl;
     setArchivoPdfVisualizar({
       ...archivo,
-      ruta_archivo: codificarRutaPublicaArchivo(archivo.ruta_archivo),
+      blobUrl,
+      ruta_archivo: resultado.url,
     });
+    setCargandoPdf(false);
   };
 
   const cerrarVisorPdf = () => {
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
     setArchivoPdfVisualizar(null);
     setErrorVisorPdf("");
+    setCargandoPdf(false);
   };
 
   if (archivos.length === 0) {
@@ -201,6 +253,7 @@ function ListaArchivosSolicitud({ archivos_json }) {
                         descargarArchivoSolicitud(
                           a.ruta_archivo,
                           a.nombre_archivo,
+                          solicitud,
                         )
                       }
                       disabled={!a.ruta_archivo}
@@ -218,7 +271,7 @@ function ListaArchivosSolicitud({ archivos_json }) {
       </Stack>
 
       <Dialog
-        open={!!archivoPdfVisualizar}
+        open={!!archivoPdfVisualizar || cargandoPdf}
         onClose={cerrarVisorPdf}
         maxWidth="lg"
         fullWidth
@@ -270,37 +323,34 @@ function ListaArchivosSolicitud({ archivos_json }) {
           dividers
           sx={{ flex: 1, p: 0, overflow: "hidden", minHeight: 0 }}
         >
-          {archivoPdfVisualizar?.ruta_archivo ? (
-            errorVisorPdf ? (
-              <Box sx={{ p: 2 }}>
-                <Alert severity="warning" sx={{ mb: 0 }}>
-                  {errorVisorPdf}
-                </Alert>
-              </Box>
-            ) : (
-              <iframe
-                src={archivoPdfVisualizar.ruta_archivo}
-                title={archivoPdfVisualizar.nombre_archivo}
-                onLoad={(e) => {
-                  try {
-                    const doc = e.currentTarget.contentDocument;
-                    if (doc?.body?.innerText?.includes("Archivo no encontrado")) {
-                      setErrorVisorPdf(
-                        "No se pudo cargar el PDF. Verifique que el archivo exista en el servidor.",
-                      );
-                    }
-                  } catch {
-                    /* iframe PDF: origen cruzado o visor nativo */
-                  }
-                }}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  minHeight: "60vh",
-                  border: "none",
-                }}
-              />
-            )
+          {cargandoPdf ? (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: "60vh",
+              }}
+            >
+              <CircularProgress sx={{ color: "#1976D2" }} />
+            </Box>
+          ) : archivoPdfVisualizar?.blobUrl ? (
+            <iframe
+              src={archivoPdfVisualizar.blobUrl}
+              title={archivoPdfVisualizar.nombre_archivo}
+              style={{
+                width: "100%",
+                height: "100%",
+                minHeight: "60vh",
+                border: "none",
+              }}
+            />
+          ) : errorVisorPdf ? (
+            <Box sx={{ p: 2 }}>
+              <Alert severity="warning" sx={{ mb: 0 }}>
+                {errorVisorPdf}
+              </Alert>
+            </Box>
           ) : (
             <Typography sx={{ p: 2, color: "#757575" }}>
               No hay ruta de archivo disponible.
@@ -1431,6 +1481,7 @@ function Solicitudes({ misSolicitudes = false }) {
                 </Typography>
                 <ListaArchivosSolicitud
                   archivos_json={dialogAprobacionesSolicitud.archivos_json}
+                  solicitud={dialogAprobacionesSolicitud}
                 />
               </Box>
               {(tieneValorRetencion(

@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import {
   DOCUMENTOS_URL_PREFIX,
   mimeDesdeNombreArchivo,
-  resolverRutaFisicaDocumento,
 } from "@/libs/almacen_documentos";
+import { resolverRutaFisicaArchivoPublico } from "@/libs/servir_archivo_publico";
 
 export async function GET(_request, { params }) {
   try {
@@ -19,7 +19,7 @@ export async function GET(_request, { params }) {
     }
 
     const rutaPublica = `${DOCUMENTOS_URL_PREFIX}/${segments.join("/")}`;
-    const fisica = resolverRutaFisicaDocumento(rutaPublica);
+    const fisica = resolverRutaFisicaArchivoPublico(rutaPublica);
 
     if (!fisica || !fs.existsSync(fisica) || !fs.statSync(fisica).isFile()) {
       return NextResponse.json({ error: "Archivo no encontrado" }, { status: 404 });

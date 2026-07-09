@@ -68,13 +68,65 @@ export function renombrarArchivoFile(archivo, nuevoNombre) {
   });
 }
 
+function normalizarSegmentoRuta(segmento) {
+  try {
+    return encodeURIComponent(decodeURIComponent(String(segmento ?? "")));
+  } catch {
+    return encodeURIComponent(String(segmento ?? ""));
+  }
+}
+
 /** Codifica segmentos de una ruta pública (/uploads/...) para URLs con espacios o caracteres especiales. */
 export function codificarRutaPublicaArchivo(rutaPublica) {
   const raw = String(rutaPublica ?? "").trim();
   if (!raw) return "";
   if (!raw.startsWith("/")) return raw;
   const segmentos = raw.split("/").filter(Boolean);
-  return `/${segmentos.map((s) => encodeURIComponent(s)).join("/")}`;
+  return `/${segmentos.map(normalizarSegmentoRuta).join("/")}`;
+}
+
+/** Rutas posibles de un archivo de solicitud (cambio puede estar en solicitudes o documentos). */
+export function rutasCandidatasArchivoSolicitud(archivo, solicitud = {}) {
+  const candidatas = [];
+  const push = (ruta) => {
+    const r = String(ruta ?? "").trim();
+    if (r && !candidatas.includes(r)) candidatas.push(r);
+  };
+
+  push(archivo?.ruta_archivo);
+
+  const nombre = String(archivo?.nombre_archivo ?? "").trim();
+  const idSol = solicitud?.id_solicitud;
+  const idDoc = solicitud?.id_documento;
+  const tipo = String(solicitud?.tipo ?? "").trim().toLowerCase();
+  const tipoCarpeta = tipo === "cambio" ? "cambio" : "nuevo";
+
+  if (nombre && idSol != null && String(idSol) !== "") {
+    push(`/uploads/solicitudes/${tipoCarpeta}/${idSol}/${nombre}`);
+  }
+  if (nombre && idDoc != null && String(idDoc) !== "" && tipo === "cambio") {
+    push(`/uploads/documentos/${idDoc}/${nombre}`);
+  }
+
+  return candidatas;
+}
+
+export async function obtenerBlobArchivoPorRutas(candidatas) {
+  const rutas = Array.isArray(candidatas) ? candidatas : [];
+  for (const ruta of rutas) {
+    const url = codificarRutaPublicaArchivo(ruta);
+    if (!url) continue;
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) continue;
+      const blob = await res.blob();
+      if (!blob.size) continue;
+      return { blob, url };
+    } catch {
+      /* siguiente candidata */
+    }
+  }
+  return null;
 }
 
 export function renombrarArchivosDocumento(archivos, ctx) {
