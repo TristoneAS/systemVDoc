@@ -48,8 +48,8 @@ import {
   buildRutaCarpetaPublica,
   ensureDocumentosDir,
   getCarpetaDocumentoFisica,
-  vaciarCarpetaDocumento,
 } from "@/libs/almacen_documentos";
+import { archivarArchivosActivosAntesDeReemplazo } from "@/libs/archivar_pdf_version";
 
 const UPLOAD_SOLICITUDES = path.join(
   process.cwd(),
@@ -219,7 +219,7 @@ async function finalizarSolicitudAprobada(connection, sol, id_solicitud) {
     }
 
     const [filasArchivosPrev] = await connection.query(
-      `SELECT nombre_archivo FROM archivos_documentos WHERE id_documento = ?`,
+      `SELECT nombre_archivo, tipo_archivo FROM archivos_documentos WHERE id_documento = ?`,
       [sol.id_documento],
     );
     archivosAnteriores = filasArchivosPrev.map((f) => f.nombre_archivo);
@@ -229,10 +229,17 @@ async function finalizarSolicitudAprobada(connection, sol, id_solicitud) {
       [sol.id_documento],
     );
 
-    vaciarCarpetaDocumento(sol.id_documento);
-
     const carpetaDestino = getCarpetaDocumentoFisica(sol.id_documento);
     ensureDocumentosDir(carpetaDestino);
+
+    const metaPorNombre = Object.fromEntries(
+      filasArchivosPrev.map((f) => [f.nombre_archivo, f]),
+    );
+    const pdfsArchivados = archivarArchivosActivosAntesDeReemplazo(
+      carpetaDestino,
+      archivosAnteriores,
+      metaPorNombre,
+    );
 
     const valoresArchivos = [];
     for (const a of archivosJson) {
@@ -290,6 +297,7 @@ async function finalizarSolicitudAprobada(connection, sol, id_solicitud) {
       detalle: `Solicitud aprobada: archivos actualizados. Motivo: ${sol.motivo || "—"}`,
       datos_anteriores: {
         archivos: archivosAnteriores,
+        pdfs_archivados: pdfsArchivados.map((a) => a.archivado),
       },
       datos_nuevos: {
         motivo: sol.motivo,

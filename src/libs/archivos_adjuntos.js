@@ -68,6 +68,15 @@ export function renombrarArchivoFile(archivo, nuevoNombre) {
   });
 }
 
+/** Codifica segmentos de una ruta pública (/uploads/...) para URLs con espacios o caracteres especiales. */
+export function codificarRutaPublicaArchivo(rutaPublica) {
+  const raw = String(rutaPublica ?? "").trim();
+  if (!raw) return "";
+  if (!raw.startsWith("/")) return raw;
+  const segmentos = raw.split("/").filter(Boolean);
+  return `/${segmentos.map((s) => encodeURIComponent(s)).join("/")}`;
+}
+
 export function renombrarArchivosDocumento(archivos, ctx) {
   const lista = (Array.isArray(archivos) ? archivos : []).filter(Boolean);
   if (!lista.length) return [];

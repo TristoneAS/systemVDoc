@@ -48,6 +48,7 @@ import {
   formatFechaRetencion,
   tieneValorRetencion,
 } from "@/libs/tiempo_retencion";
+import { codificarRutaPublicaArchivo } from "@/libs/archivos_adjuntos";
 
 function formatFecha(v) {
   if (!v) return "—";
@@ -91,7 +92,7 @@ function esArchivoPdf(archivo) {
 
 function descargarArchivoSolicitud(rutaArchivo, nombreArchivo) {
   const link = document.createElement("a");
-  link.href = rutaArchivo;
+  link.href = codificarRutaPublicaArchivo(rutaArchivo);
   link.download = nombreArchivo || "archivo";
   document.body.appendChild(link);
   link.click();
@@ -101,7 +102,21 @@ function descargarArchivoSolicitud(rutaArchivo, nombreArchivo) {
 /** Lista de archivos de una solicitud (modal o reutilizable). */
 function ListaArchivosSolicitud({ archivos_json }) {
   const [archivoPdfVisualizar, setArchivoPdfVisualizar] = useState(null);
+  const [errorVisorPdf, setErrorVisorPdf] = useState("");
   const archivos = parseArchivos(archivos_json);
+
+  const abrirVisorPdf = (archivo) => {
+    setErrorVisorPdf("");
+    setArchivoPdfVisualizar({
+      ...archivo,
+      ruta_archivo: codificarRutaPublicaArchivo(archivo.ruta_archivo),
+    });
+  };
+
+  const cerrarVisorPdf = () => {
+    setArchivoPdfVisualizar(null);
+    setErrorVisorPdf("");
+  };
 
   if (archivos.length === 0) {
     return (
@@ -171,7 +186,7 @@ function ListaArchivosSolicitud({ archivos_json }) {
                   <Tooltip title="Ver PDF">
                     <IconButton
                       size="small"
-                      onClick={() => setArchivoPdfVisualizar(a)}
+                      onClick={() => abrirVisorPdf(a)}
                       sx={{ color: "#1976D2" }}
                       aria-label={`Ver ${a.nombre_archivo}`}
                     >
@@ -204,7 +219,7 @@ function ListaArchivosSolicitud({ archivos_json }) {
 
       <Dialog
         open={!!archivoPdfVisualizar}
-        onClose={() => setArchivoPdfVisualizar(null)}
+        onClose={cerrarVisorPdf}
         maxWidth="lg"
         fullWidth
         PaperProps={{
@@ -244,7 +259,7 @@ function ListaArchivosSolicitud({ archivos_json }) {
           </Box>
           <IconButton
             size="small"
-            onClick={() => setArchivoPdfVisualizar(null)}
+            onClick={cerrarVisorPdf}
             sx={{ color: "#757575", flexShrink: 0 }}
             aria-label="Cerrar visor"
           >
@@ -256,16 +271,36 @@ function ListaArchivosSolicitud({ archivos_json }) {
           sx={{ flex: 1, p: 0, overflow: "hidden", minHeight: 0 }}
         >
           {archivoPdfVisualizar?.ruta_archivo ? (
-            <iframe
-              src={archivoPdfVisualizar.ruta_archivo}
-              title={archivoPdfVisualizar.nombre_archivo}
-              style={{
-                width: "100%",
-                height: "100%",
-                minHeight: "60vh",
-                border: "none",
-              }}
-            />
+            errorVisorPdf ? (
+              <Box sx={{ p: 2 }}>
+                <Alert severity="warning" sx={{ mb: 0 }}>
+                  {errorVisorPdf}
+                </Alert>
+              </Box>
+            ) : (
+              <iframe
+                src={archivoPdfVisualizar.ruta_archivo}
+                title={archivoPdfVisualizar.nombre_archivo}
+                onLoad={(e) => {
+                  try {
+                    const doc = e.currentTarget.contentDocument;
+                    if (doc?.body?.innerText?.includes("Archivo no encontrado")) {
+                      setErrorVisorPdf(
+                        "No se pudo cargar el PDF. Verifique que el archivo exista en el servidor.",
+                      );
+                    }
+                  } catch {
+                    /* iframe PDF: origen cruzado o visor nativo */
+                  }
+                }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  minHeight: "60vh",
+                  border: "none",
+                }}
+              />
+            )
           ) : (
             <Typography sx={{ p: 2, color: "#757575" }}>
               No hay ruta de archivo disponible.
@@ -274,7 +309,7 @@ function ListaArchivosSolicitud({ archivos_json }) {
         </DialogContent>
         <DialogActions sx={{ px: 2, py: 1 }}>
           <Button
-            onClick={() => setArchivoPdfVisualizar(null)}
+            onClick={cerrarVisorPdf}
             sx={{ color: "#1976D2", textTransform: "none" }}
           >
             Cerrar
