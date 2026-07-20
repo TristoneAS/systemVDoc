@@ -27,6 +27,7 @@ import {
   FormControlLabel,
   Switch,
   InputAdornment,
+  Grid,
 } from "@mui/material";
 import {
   Archive,
@@ -52,6 +53,7 @@ import {
   obtenerBlobArchivoPorRutas,
   rutasCandidatasArchivoSolicitud,
 } from "@/libs/archivos_adjuntos";
+import { calcularPlazoRechazoAutomatico } from "@/libs/plazo_aprobacion_solicitud";
 
 function formatFecha(v) {
   if (!v) return "—";
@@ -91,6 +93,260 @@ function esArchivoPdf(archivo) {
   if (tipo.includes("pdf")) return true;
   const nombre = String(archivo?.nombre_archivo ?? "").toLowerCase();
   return nombre.endsWith(".pdf");
+}
+
+function TextoPlazoRechazoAutomatico({ estado, fechaCreacion }) {
+  if (String(estado ?? "").trim().toLowerCase() !== "pendiente") {
+    return (
+      <Typography variant="caption" sx={{ color: "#9e9e9e" }}>
+        —
+      </Typography>
+    );
+  }
+
+  const plazo = calcularPlazoRechazoAutomatico(fechaCreacion);
+  if (!plazo) {
+    return (
+      <Typography variant="caption" sx={{ color: "#9e9e9e" }}>
+        —
+      </Typography>
+    );
+  }
+
+  const { diasRestantes, fechaLimiteTexto, vencido, urgente } = plazo;
+  let lineaDias;
+  if (vencido) {
+    lineaDias = "Plazo vencido";
+  } else if (diasRestantes === 1) {
+    lineaDias = "Queda 1 día natural";
+  } else {
+    lineaDias = `Quedan ${diasRestantes} días naturales`;
+  }
+
+  const color = vencido ? "#C62828" : urgente ? "#E65100" : "#616161";
+
+  return (
+    <Box sx={{ minWidth: 0 }}>
+      <Typography
+        variant="caption"
+        sx={{
+          color,
+          display: "block",
+          fontWeight: vencido || urgente ? 600 : 500,
+          lineHeight: 1.35,
+        }}
+      >
+        {lineaDias}
+      </Typography>
+      <Typography
+        variant="caption"
+        sx={{ color: "#757575", display: "block", lineHeight: 1.35 }}
+      >
+        Límite: {fechaLimiteTexto}
+      </Typography>
+    </Box>
+  );
+}
+
+function DetalleCampo({ label, children, fullWidth = false }) {
+  return (
+    <Box sx={{ minWidth: 0, gridColumn: fullWidth ? "1 / -1" : undefined }}>
+      <Typography
+        variant="caption"
+        component="div"
+        sx={{
+          color: "#757575",
+          fontWeight: 600,
+          letterSpacing: "0.02em",
+          mb: 0.35,
+        }}
+      >
+        {label}
+      </Typography>
+      <Box sx={{ color: "#212121", fontSize: "0.875rem", lineHeight: 1.45 }}>
+        {children}
+      </Box>
+    </Box>
+  );
+}
+
+function AlertaPlazoAprobacion({ estado, fechaCreacion }) {
+  if (String(estado ?? "").trim().toLowerCase() !== "pendiente") {
+    return null;
+  }
+
+  const plazo = calcularPlazoRechazoAutomatico(fechaCreacion);
+  if (!plazo) return null;
+
+  const { diasRestantes, fechaLimiteTexto, vencido, urgente } = plazo;
+  let lineaDias;
+  if (vencido) {
+    lineaDias = "Plazo vencido";
+  } else if (diasRestantes === 1) {
+    lineaDias = "Queda 1 día natural";
+  } else {
+    lineaDias = `Quedan ${diasRestantes} días naturales`;
+  }
+
+  const severity = vencido ? "error" : urgente ? "warning" : "info";
+
+  return (
+    <Alert severity={severity} sx={{ mb: 2 }}>
+      <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.25 }}>
+        Plazo de aprobación · {lineaDias}
+      </Typography>
+      <Typography variant="body2" sx={{ color: "inherit", opacity: 0.95 }}>
+        Fecha límite: <strong>{fechaLimiteTexto}</strong>
+      </Typography>
+      <Typography variant="caption" sx={{ display: "block", mt: 0.75, opacity: 0.9 }}>
+        Si no se aprueba a tiempo, la solicitud se rechazará en automático.
+      </Typography>
+    </Alert>
+  );
+}
+
+function DetalleSolicitudPanel({ solicitud }) {
+  if (!solicitud) return null;
+
+  const muestraRetencion =
+    tieneValorRetencion(solicitud.tiempo_retencion) ||
+    Boolean(String(solicitud.ubicacion_registro ?? "").trim());
+
+  return (
+    <Box sx={{ mb: 2 }}>
+      <Paper
+        variant="outlined"
+        sx={{
+          p: 2,
+          mb: 2,
+          borderRadius: 2,
+          borderColor: "rgba(25, 118, 210, 0.18)",
+          bgcolor: "#FAFCFF",
+        }}
+      >
+        <Stack
+          direction="row"
+          flexWrap="wrap"
+          gap={1}
+          alignItems="center"
+          sx={{ mb: 2 }}
+        >
+          <Chip
+            size="small"
+            label={solicitud.tipo === "nuevo" ? "Nuevo documento" : "Cambio"}
+            sx={{
+              fontWeight: 600,
+              bgcolor: "#E3F2FD",
+              color: "#1565C0",
+            }}
+          />
+          <Chip
+            size="small"
+            label={labelEstadoChip(solicitud.estado)}
+            sx={{
+              fontWeight: 600,
+              color: "#fff",
+              bgcolor: colorEstadoSolicitudChip(solicitud.estado),
+            }}
+          />
+          {solicitud.id_documento ? (
+            <Typography variant="caption" sx={{ color: "#757575", ml: "auto" }}>
+              Doc. {solicitud.id_documento}
+            </Typography>
+          ) : null}
+        </Stack>
+
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <DetalleCampo label="Solicitante">
+              {textoSolicitante(solicitud)}
+            </DetalleCampo>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <DetalleCampo label="Fecha de registro">
+              {formatFecha(solicitud.fecha_creacion)}
+            </DetalleCampo>
+          </Grid>
+          {(solicitud.nomenclatura || solicitud.nombre_documento) && (
+            <Grid item xs={12}>
+              <DetalleCampo label="Documento">
+                {[solicitud.nomenclatura, solicitud.nombre_documento]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </DetalleCampo>
+            </Grid>
+          )}
+          {String(solicitud.motivo ?? "").trim() && (
+            <Grid item xs={12}>
+              <DetalleCampo label="Motivo">
+                {String(solicitud.motivo).trim()}
+              </DetalleCampo>
+            </Grid>
+          )}
+        </Grid>
+      </Paper>
+
+      <AlertaPlazoAprobacion
+        estado={solicitud.estado}
+        fechaCreacion={solicitud.fecha_creacion}
+      />
+
+      <Paper
+        variant="outlined"
+        sx={{
+          p: 2,
+          mb: muestraRetencion ? 2 : 0,
+          borderRadius: 2,
+          borderColor: "rgba(25, 118, 210, 0.14)",
+        }}
+      >
+        <Typography
+          variant="subtitle2"
+          sx={{ color: "#1976D2", fontWeight: 700, mb: 1.25 }}
+        >
+          Documentos cargados
+        </Typography>
+        <ListaArchivosSolicitud
+          archivos_json={solicitud.archivos_json}
+          solicitud={solicitud}
+        />
+      </Paper>
+
+      {muestraRetencion && (
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 2,
+            borderRadius: 2,
+            borderColor: "rgba(25, 118, 210, 0.14)",
+          }}
+        >
+          <Typography
+            variant="subtitle2"
+            sx={{ color: "#1976D2", fontWeight: 700, mb: 1.25 }}
+          >
+            Retención y registro
+          </Typography>
+          <Grid container spacing={2}>
+            {tieneValorRetencion(solicitud.tiempo_retencion) && (
+              <Grid item xs={12} sm={6}>
+                <DetalleCampo label="Fecha de retención">
+                  {formatFechaRetencion(solicitud.tiempo_retencion)}
+                </DetalleCampo>
+              </Grid>
+            )}
+            {String(solicitud.ubicacion_registro ?? "").trim() && (
+              <Grid item xs={12} sm={6}>
+                <DetalleCampo label="Ubicación del registro">
+                  {String(solicitud.ubicacion_registro).trim()}
+                </DetalleCampo>
+              </Grid>
+            )}
+          </Grid>
+        </Paper>
+      )}
+    </Box>
+  );
 }
 
 async function descargarArchivoSolicitud(rutaArchivo, nombreArchivo, solicitud) {
@@ -180,7 +436,7 @@ function ListaArchivosSolicitud({ archivos_json, solicitud = null }) {
 
   return (
     <>
-      <Stack spacing={0.75} alignItems="flex-start">
+      <Stack spacing={1} alignItems="stretch">
         {archivos.map((a, idx) => {
           const esPdf = esArchivoPdf(a);
           return (
@@ -188,9 +444,13 @@ function ListaArchivosSolicitud({ archivos_json, solicitud = null }) {
               key={`${a.nombre_archivo}-${idx}`}
               sx={{
                 display: "flex",
-                alignItems: "flex-start",
-                gap: 0.5,
+                alignItems: "center",
+                gap: 1,
                 maxWidth: "100%",
+                p: 1.25,
+                borderRadius: 1.5,
+                border: "1px solid rgba(25, 118, 210, 0.12)",
+                bgcolor: "#FAFAFA",
               }}
             >
               <InsertDriveFile
@@ -1051,6 +1311,7 @@ function Solicitudes({ misSolicitudes = false }) {
                   <TableCell>Detalle</TableCell>
                   <TableCell>Quién realizó la solicitud</TableCell>
                   <TableCell>Fecha</TableCell>
+                  <TableCell>Plazo aprobación</TableCell>
                   <TableCell align="right">Acción</TableCell>
                 </TableRow>
               </TableHead>
@@ -1058,7 +1319,7 @@ function Solicitudes({ misSolicitudes = false }) {
                 {rowsFiltradas.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={8}
+                      colSpan={9}
                       sx={{ color: "#757575", border: 0 }}
                     >
                       {hayFiltroSolicitud
@@ -1163,6 +1424,12 @@ function Solicitudes({ misSolicitudes = false }) {
                         </TableCell>
                         <TableCell sx={{ whiteSpace: "nowrap" }}>
                           {formatFecha(r.fecha_creacion)}
+                        </TableCell>
+                        <TableCell sx={{ minWidth: 140 }}>
+                          <TextoPlazoRechazoAutomatico
+                            estado={r.estado}
+                            fechaCreacion={r.fecha_creacion}
+                          />
                         </TableCell>
                         <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
                           <Box
@@ -1458,63 +1725,8 @@ function Solicitudes({ misSolicitudes = false }) {
             </Typography>
           )}
         </DialogTitle>
-        <DialogContent dividers>
-          {dialogAprobacionesSolicitud && (
-            <Stack spacing={1.5} sx={{ mb: 2 }}>
-              <Box>
-                <Typography
-                  variant="subtitle2"
-                  sx={{ color: "#757575", fontWeight: 600, mb: 0.5 }}
-                >
-                  Quién realizó la solicitud
-                </Typography>
-                <Typography variant="body2" sx={{ color: "#212121" }}>
-                  {textoSolicitante(dialogAprobacionesSolicitud)}
-                </Typography>
-              </Box>
-              <Box>
-                <Typography
-                  variant="subtitle2"
-                  sx={{ color: "#757575", fontWeight: 600, mb: 0.5 }}
-                >
-                  Documentos cargados
-                </Typography>
-                <ListaArchivosSolicitud
-                  archivos_json={dialogAprobacionesSolicitud.archivos_json}
-                  solicitud={dialogAprobacionesSolicitud}
-                />
-              </Box>
-              {(tieneValorRetencion(
-                dialogAprobacionesSolicitud.tiempo_retencion,
-              ) ||
-                dialogAprobacionesSolicitud.ubicacion_registro?.trim()) && (
-                <Box>
-                  <Typography
-                    variant="subtitle2"
-                    sx={{ color: "#757575", fontWeight: 600, mb: 0.5 }}
-                  >
-                    Retención y registro
-                  </Typography>
-                  {tieneValorRetencion(
-                    dialogAprobacionesSolicitud.tiempo_retencion,
-                  ) ? (
-                    <Typography variant="body2" sx={{ color: "#212121" }}>
-                      Fecha de retención:{" "}
-                      {formatFechaRetencion(
-                        dialogAprobacionesSolicitud.tiempo_retencion,
-                      )}
-                    </Typography>
-                  ) : null}
-                  {dialogAprobacionesSolicitud.ubicacion_registro?.trim() ? (
-                    <Typography variant="body2" sx={{ color: "#212121" }}>
-                      Ubicación del registro:{" "}
-                      {dialogAprobacionesSolicitud.ubicacion_registro}
-                    </Typography>
-                  ) : null}
-                </Box>
-              )}
-            </Stack>
-          )}
+        <DialogContent dividers sx={{ pt: 2 }}>
+          <DetalleSolicitudPanel solicitud={dialogAprobacionesSolicitud} />
           {dialogAprobacionesSolicitud && <Divider sx={{ my: 2 }} />}
           <Typography
             variant="subtitle2"

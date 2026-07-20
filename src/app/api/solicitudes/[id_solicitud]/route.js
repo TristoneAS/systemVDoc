@@ -1023,6 +1023,7 @@ export async function PUT(request, { params }) {
       `UPDATE solicitudes SET
         estado = 'pendiente',
         fecha_resolucion = NULL,
+        fecha_creacion = NOW(),
         fecha_alta = ?,
         nomenclatura = ?,
         nombre_documento = ?,

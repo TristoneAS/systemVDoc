@@ -5,11 +5,12 @@ import {
   ACCION_HISTORIAL,
   registrarHistorial,
 } from "@/libs/historial_archivos";
+import { DIAS_LIMITE_APROBACION_SOLICITUD } from "@/libs/plazo_aprobacion_solicitud";
+
+export { DIAS_LIMITE_APROBACION_SOLICITUD };
 
 export const COMENTARIO_RECHAZO_TIEMPO_EXCEDIDO =
   "Rechazada en automático por tiempo excedido";
-
-export const DIAS_LIMITE_APROBACION_SOLICITUD = 10;
 
 async function rechazarSolicitudVencidaEnTransaccion(
   connection,
